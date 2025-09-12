@@ -1,0 +1,4 @@
+-Wall
+-Wextra
+-std=gnu++23
+-Iinclude

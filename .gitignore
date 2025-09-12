@@ -1,0 +1,6 @@
+build/
+.xmake/
+.cache/
+
+**/a.out
+**/perf.data*
