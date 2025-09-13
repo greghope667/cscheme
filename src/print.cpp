@@ -43,7 +43,7 @@ static void print_list(FILE* f, Pair* l) {
         if (rest == c_null) {
             break;
         }
-        if (rest._tag != SXI_TAG_pair) {
+        if (not instance<Pair>(rest)) {
             fprintf(f, " . ");
             print(f, rest);
             break;

@@ -6,7 +6,7 @@ static char error_buffer[4096];
 
 [[noreturn]] void sxi::error(const char* msg) {
     snprintf(error_buffer, sizeof(error_buffer), "%s", msg);
-    throw Error();
+    SXI_THROW;
 }
 
 [[noreturn]] void sxi::error_f(const char* msg, ...) {
@@ -14,7 +14,7 @@ static char error_buffer[4096];
     va_start(args, msg);
     vsnprintf(error_buffer, sizeof(error_buffer), msg, args);
     va_end(args);
-    throw Error();
+    SXI_THROW;
 }
 
 [[noreturn]] void sxi::type_error(sxi_tag expected, SXI actual) {
@@ -22,7 +22,7 @@ static char error_buffer[4096];
     fprintf(f, "type error: expected %s, actual: ", get_tag_name(expected));
     print(f, actual);
     fclose(f);
-    throw Error();
+    SXI_THROW;
 }
 
 const char* sxi::Error::what() {

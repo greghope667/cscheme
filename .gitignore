@@ -2,5 +2,7 @@ build/
 .xmake/
 .cache/
 
+src/scheme/
+
 **/a.out
 **/perf.data*

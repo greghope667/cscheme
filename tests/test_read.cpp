@@ -39,7 +39,7 @@ void test_read_constants() {
 }
 
 void test_read_list() {
-    read_print_compare("(1 2 3)", "(1 2 3)");
+    read_print_compare("(1  2  3)", "(1 2 3)");
     read_print_compare("(1 . 2)", "(1 . 2)");
     read_print_compare("(1 . (2 . (3 . ())))", "(1 2 3)");
 }
@@ -49,10 +49,17 @@ void test_read_symbols() {
     read_print_compare("(a b c)", "(a b c)");
 }
 
+void test_read_quote() {
+    read_print_compare("'1", "(quote 1)");
+    read_print_compare("'(1 2)", "(quote (1 2))");
+    // read_print_compare("'", "(quote #eof)"); <-- desired?
+}
+
 TEST_LIST = {
     { "test_read_int", test_read_int },
     { "test_read_constants", test_read_constants },
     { "test_read_list", test_read_list },
     { "test_read_symbols", test_read_symbols },
+    { "test_read_quote", test_read_quote },
     { NULL, NULL },
 };

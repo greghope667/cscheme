@@ -7,7 +7,6 @@
 #include <stdlib.h>
 
 using namespace sxi;
-using namespace sxi::sym_impl;
 
 Symbol* sxi::make_symbol(const char* str, int len) {
     if ((unsigned)len > MAX_SYMBOL_LENGTH)
@@ -23,9 +22,8 @@ Symbol* sxi::make_symbol(const char* str, int len) {
 
     for (auto* intern : intern_table) {
         if (intern->hash == hash && intern->length == len) {
-            if (memcmp(intern->data, str, len) == 0) {
-                return reinterpret_cast<Symbol*>(intern);
-            }
+            if (memcmp(intern->data, str, len) == 0)
+                return static_cast<Symbol*>(intern);
         }
     }
 
@@ -37,13 +35,17 @@ Symbol* sxi::make_symbol(const char* str, int len) {
 
     intern_table.push(sym);
 
-    return reinterpret_cast<Symbol*>(sym);
+    return static_cast<Symbol*>(sym);
+}
+
+Symbol* sxi::make_symbol(const char* str) {
+    return make_symbol(str, strlen(str));
 }
 
 const char* sxi::symbol_name(const Symbol* sym) {
     auto n = (uintptr_t)sym;
     if (n < GENSYM_BASE) {
-        return reinterpret_cast<const InternedSymbol*>(sym)->data;
+        return static_cast<const InternedSymbol*>(sym)->data;
     } else {
         static char gensym_name[32] = {};
         snprintf(gensym_name, sizeof(gensym_name), "#<gensym%zx>", n - GENSYM_BASE);

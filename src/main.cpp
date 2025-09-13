@@ -1,18 +1,16 @@
 #include "sxi.hpp"
-#include <assert.h>
+#include <stdio.h>
 
 int main() {
-    for (int i=0; i<10; i++)
-        print(stdout, wrap(sxi::gensym()));
     for (;;) {
-        try {
+        SXI_TRY {
             printf("> ");
             auto s = sxi::read(stdin);
             if (s == sxi::c_eof)
                 return 0;
             sxi::print(stdout, s);
-        } catch (sxi::Error e) {
-            printf("Exception: %s\n", e.what());
+        } SXI_CATCH(e) {
+            printf("Exception %s", e.what());
         }
         putchar('\n');
     }

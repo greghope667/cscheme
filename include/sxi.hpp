@@ -69,19 +69,19 @@ template <sxi_tag t> struct tagged { static constexpr sxi_tag tag = t; };
 struct boxed { static constexpr bool is_boxed = true; };
 struct unboxed { static constexpr bool is_unboxed = true; };
 
-template<typename T> constexpr sxi_tag tag = traits<T>::tag;
+template <typename T> constexpr sxi_tag tag = traits<T>::tag;
 }
 
-template<typename T>
+template <typename T>
 requires (tt::traits<T>::is_unboxed)
-inline SXI
+constexpr inline SXI
 wrap(T t) {
     return { ._tag = tt::tag<T>, ._integer=static_cast<intptr_t>(t) };
 }
 
-template<typename T>
+template <typename T>
 requires (tt::traits<T>::is_boxed)
-inline SXI
+constexpr inline SXI
 wrap(T* t) {
     return { ._tag = tt::tag<T>, ._pointer=static_cast<void*>(t) };
 }
@@ -90,7 +90,7 @@ wrap(T* t) {
 
 template <typename T>
 requires(tt::traits<T>::is_unboxed)
-inline T
+constexpr inline T
 as(SXI s) {
     if (s._tag != tt::tag<T>)
         type_error(tt::tag<T>, s);
@@ -99,11 +99,17 @@ as(SXI s) {
 
 template <typename T>
 requires(tt::traits<T>::is_boxed)
-inline T*
+constexpr inline T*
 as(SXI s) {
     if (s._tag != tt::tag<T>)
         type_error(tt::tag<T>, s);
     return static_cast<T*>(s._pointer);
+}
+
+template <typename T>
+constexpr inline bool
+instance(SXI s) {
+    return s._tag == tt::tag<T>;
 }
 
 /// Constants ///
@@ -115,24 +121,25 @@ enum sxi_constant {
     SXI_CONST_eof,
     SXI_CONST_null, // empty list
 };
-template<> struct tt::traits<sxi_constant> : tt::tagged<SXI_TAG_const>, tt::unboxed {};
+template <> struct tt::traits<sxi_constant> : tt::tagged<SXI_TAG_const>, tt::unboxed {};
 
-constexpr SXI c_null  = { ._tag = SXI_TAG_const, ._integer = SXI_CONST_null  };
-constexpr SXI c_true  = { ._tag = SXI_TAG_const, ._integer = SXI_CONST_true  };
-constexpr SXI c_false = { ._tag = SXI_TAG_const, ._integer = SXI_CONST_false };
-constexpr SXI c_eof   = { ._tag = SXI_TAG_const, ._integer = SXI_CONST_eof   };
-constexpr SXI c_void  = { ._tag = SXI_TAG_const, ._integer = SXI_CONST_void  };
+// constexpr SXI c_null  = { ._tag = SXI_TAG_const, ._integer = SXI_CONST_null  };
+constexpr SXI c_null  = wrap(SXI_CONST_null);
+constexpr SXI c_true  = wrap(SXI_CONST_true);
+constexpr SXI c_false = wrap(SXI_CONST_false);
+constexpr SXI c_eof   = wrap(SXI_CONST_eof);
+constexpr SXI c_void  = wrap(SXI_CONST_void);
 
 /// Booleans ///
 // Booleans are not treated as a full distinct data type, instead
 // they're bundled with the other constants. There's no wrap()/as()
 // methods, instead here's some accessors
 
-inline SXI wrap_bool(bool b) {
+constexpr inline SXI wrap_bool(bool b) {
     return b ? c_true : c_false;
 }
 
-inline bool is_truthy(SXI sxi) {
+constexpr inline bool is_truthy(SXI sxi) {
     return sxi != c_false;
 }
 
@@ -140,7 +147,7 @@ inline bool is_truthy(SXI sxi) {
 // The default numeric type is a full pointer sized integer.
 
 typedef intptr_t sxi_int;
-template<> struct tt::traits<sxi_int> : tt::tagged<SXI_TAG_int>, tt::unboxed {};
+template <> struct tt::traits<sxi_int> : tt::tagged<SXI_TAG_int>, tt::unboxed {};
 
 
 /// Pairs ///
@@ -174,10 +181,10 @@ template <> struct tt::traits<Symbol> : tt::tagged<SXI_TAG_sym>, tt::boxed {};
 static constexpr int MAX_SYMBOL_LENGTH = 100;
 
 Symbol* make_symbol(const char* str, int len);
+Symbol* make_symbol(const char* str);
 const char* symbol_name(const Symbol* sym);
 size_t symbol_table_size();
 Symbol* gensym();
-// uint32_t symbol_hash(const Symbol* sym);
 
 /// Environments ///
 
@@ -185,10 +192,26 @@ struct Environment;
 template <> struct tt::traits<Environment> : tt::tagged<SXI_TAG_env>, tt::boxed {};
 
 Environment* make_environment(Environment* parent);
-Environment* make_environment_toplevel();
+Environment* make_environment_rootlet();
 void env_define(Environment*, const Symbol* name, SXI value);
 void env_set(Environment*, const Symbol* name, SXI value);
 SXI env_lookup(Environment*, const Symbol* name);
+
+/// Thunks (0-argument procedures) ///
+
+struct Thunk;
+template <> struct tt::traits<Thunk> : tt::tagged<SXI_TAG_thunk>, tt::boxed {};
+
+Thunk* compile(SXI expr, Environment* env);
+SXI execute(Thunk*);
+void disassemble(FILE*, Thunk*);
+
+/// Lambdas ///
+
+struct Lambda;
+template <> struct tt::traits<Lambda> : tt::tagged<SXI_TAG_lambda>, tt::boxed {};
+
+void disassemble(FILE*, Lambda*);
 
 /// Read ///
 
@@ -201,3 +224,17 @@ const char* get_constant_name(sxi_constant c);
 const char* get_tag_name(sxi_tag t);
 
 } // sxi
+
+#if 1
+#define SXI_TRY try
+#define SXI_CATCH(e) catch (sxi::Error e)
+#define SXI_THROW throw sxi::Error{}
+#else
+// idea for when exceptions are disabled
+// _error_jmp should actually be a chain though
+#include <setjmp.h>
+namespace sxi { inline sigjmp_buf _error_jmp; }
+#define SXI_TRY if (not sigsetjmp(sxi::_error_jmp, 0))
+#define SXI_CATCH(e) else if (sxi::Error e; true)
+#define SXI_THROW siglongjmp(sxi::_error_jmp, 1)
+#endif
