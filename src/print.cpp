@@ -1,3 +1,4 @@
+#include "code.hpp"
 #include "sxi.hpp"
 #include "match.hpp"
 
@@ -76,4 +77,73 @@ void sxi::print(FILE* f, SXI value) {
             fprintf(f, "#<%s value 0x%zx>", get_tag_name(value._tag), value._integer);
             break;
     }
+}
+
+const char* sxi::get_opcode_name(opcode op) {
+    switch (op) {
+        case op_literal:        return "literal";
+        case op_ret:            return "ret";
+        case op_lookup:         return "lookup";
+        case op_alloc_cont:     return "alloc_cont";
+        case op_alloc_stack:    return "alloc_stack";
+        case op_push:           return "push";
+        case op_call:           return "call";
+        case op_tailcall:       return "tailcall";
+        case op_exit:           return "exit";
+    }
+    static char opname[32];
+    snprintf(opname, 32, "<op %i>", op);
+    fprintf(stderr, "WARNING: opcode %s has no name\n", opname);
+    return opname;
+}
+
+static void disassemble_code(FILE* f, Code* code) {
+    auto len = code->insns_len;
+    fprintf(
+        f, "CODE: (len %i sym %i lit %i) %p\n", 
+        len, code->symbols_len, code->literals_len, code
+    );
+    int ip = 0;
+    auto insns = code->insns;
+    while (ip < len) {
+        auto op = insns[ip];
+        printf("%8i:  %-24s", ip, get_opcode_name(op));
+
+        switch (op) {
+            case op_literal:
+                print(f, code->literals[insns[ip+1]]);
+                ip += 2;
+                break;
+            
+            case op_lookup: {
+                auto sym = code->symbols[insns[ip+1]];
+                fprintf(f, "%s", symbol_name(sym));
+                ip += 2;
+                break;
+            }
+
+            case op_alloc_stack:
+                fprintf(f, "%i", insns[ip+1]);
+                ip += 2;
+                break;
+
+            case op_alloc_cont:
+            case op_call:
+            case op_tailcall:
+            case op_ret:
+            case op_push:
+            case op_exit:
+                ip += 1;
+                break;
+        }
+        putchar('\n');
+    }
+}
+
+void sxi::disassemble(FILE* f, const Thunk* t) { 
+    disassemble_code(f, t->code);
+}
+
+void sxi::disassemble(FILE* f, const Lambda* l) {
+    disassemble_code(f, l->code);
 }

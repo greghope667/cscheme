@@ -1,19 +1,35 @@
 #pragma once
 
 #include "sxi.hpp"
-#include "utils.hpp"
+#include "tl.hpp"
 
 namespace sxi {
 
-enum opcode : uint16_t {
+enum opcode : int16_t {
     op_literal,
     op_ret,
+    op_lookup,
+    op_alloc_cont,
+    op_alloc_stack,
+    op_push,
+    op_call,
+    op_tailcall,
+    op_exit,
 };
 
+const char* get_opcode_name(opcode op);
+
+struct CompiledLambda;
+
 struct Code {
-    vector<opcode> instructions;
-    vector<Symbol*> symbols;
-    vector<SXI> literals;
+    opcode* insns;
+    Symbol** symbols;
+    SXI* literals;
+    CompiledLambda* lambdas;
+    int16_t insns_len;
+    int16_t symbols_len;
+    int16_t literals_len;
+    int16_t lambdas_len;
 };
 template <> struct tt::traits<Code> : tt::boxed {};
 
@@ -32,6 +48,11 @@ struct Lambda {
 struct Thunk {
     Code* code;
     Environment* env;
+};
+
+struct CompiledLambda {
+    Code* code;
+    Formals* arguments;
 };
 
 } // sxi

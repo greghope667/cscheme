@@ -191,11 +191,11 @@ Symbol* gensym();
 struct Environment;
 template <> struct tt::traits<Environment> : tt::tagged<SXI_TAG_env>, tt::boxed {};
 
-Environment* make_environment(Environment* parent);
+Environment* make_environment(Environment* parent); // parent is nullable
 Environment* make_environment_rootlet();
 void env_define(Environment*, const Symbol* name, SXI value);
 void env_set(Environment*, const Symbol* name, SXI value);
-SXI env_lookup(Environment*, const Symbol* name);
+SXI env_lookup(const Environment*, const Symbol* name);
 
 /// Thunks (0-argument procedures) ///
 
@@ -204,14 +204,14 @@ template <> struct tt::traits<Thunk> : tt::tagged<SXI_TAG_thunk>, tt::boxed {};
 
 Thunk* compile(SXI expr, Environment* env);
 SXI execute(Thunk*);
-void disassemble(FILE*, Thunk*);
+void disassemble(FILE*, const Thunk*);
 
 /// Lambdas ///
 
 struct Lambda;
 template <> struct tt::traits<Lambda> : tt::tagged<SXI_TAG_lambda>, tt::boxed {};
 
-void disassemble(FILE*, Lambda*);
+void disassemble(FILE*, const Lambda*);
 
 /// Read ///
 

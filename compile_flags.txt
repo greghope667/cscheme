@@ -2,3 +2,4 @@
 -Wextra
 -std=gnu++23
 -Iinclude
+-Wno-c99-designator

@@ -4,8 +4,11 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#define sxi_realloc(p, o, n) realloc(p, n)
-namespace sxi { [[noreturn]] void error_f(const char*, ...); }
+#include "alloc.hpp"
+
+namespace sxi {
+
+[[noreturn]] void error_f(const char*, ...);
 
 static inline void bounds_check(int index, int length) {
     if (index < 0 || index >= length)
@@ -44,13 +47,23 @@ struct vector {
         }
     }
 
+    void dealloc() {
+        sxi_free(data, capacity);
+        *this = {};
+    }
+
+    void shrink_to_fit() {
+        data = (T*)sxi_realloc(data, capacity*sizeof(T), length*sizeof(T));
+        capacity = length;
+    }
+
     auto begin(this auto&& self) { return self.data; }
     auto end(this auto&& self) { return self.data + self.length; }
 
     T& operator[](int i) { bounds_check(i, length); return data[i]; }
-    ::span<T> span() { return { data, length }; }
+    sxi::span<T> span() { return { data, length }; }
 
-    static constexpr vector empty() { return vector{}; }
+    // static constexpr vector empty() { return vector{}; }
 };
 
 template<typename K, typename V, auto hash_fn>
@@ -63,11 +76,11 @@ struct insert_only_map {
     int* index;
     unsigned index_length;
 
-    static constexpr insert_only_map empty() { return insert_only_map{}; }
+    // static constexpr insert_only_map empty() { return insert_only_map{}; }
 
-    LookupResult lookup(K key) { return lookup(key, hash_fn(key)); }
+    LookupResult lookup(K key) const { return lookup(key, hash_fn(key)); }
 
-    LookupResult lookup(K key, uint32_t hash) {
+    LookupResult lookup(K key, uint32_t hash) const {
         if (index) {
             auto mask = index_length - 1;
             for (unsigned i=0;; i++) {
@@ -135,3 +148,5 @@ namespace std {
     template <typename T> constexpr const T* begin(initializer_list<T> i) { return i.data; }
     template <typename T> constexpr const T* end(initializer_list<T> i) { return i.data + i.length; }
 }
+
+} // sxi
