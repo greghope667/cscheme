@@ -30,6 +30,7 @@ void test_print_constants() {
     print_and_compare(c_true, "#t");
     print_and_compare(c_false, "#f");
     print_and_compare(c_eof, "#eof");
+    print_and_compare(c_void, "#void");
 }
 
 void test_print_list() {

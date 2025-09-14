@@ -25,7 +25,7 @@ const char* sxi::get_constant_name(sxi_constant c) {
     switch (c) {
     case SXI_CONST_false:   return "#f";
     case SXI_CONST_true:    return "#t";
-    case SXI_CONST_void:    return "#<>";
+    case SXI_CONST_void:    return "#void";
     case SXI_CONST_eof:     return "#eof";
     case SXI_CONST_null:    return "()";
     default:                break;
@@ -90,6 +90,10 @@ const char* sxi::get_opcode_name(opcode op) {
         case op_call:           return "call";
         case op_tailcall:       return "tailcall";
         case op_exit:           return "exit";
+        case op_branch:         return "branch";
+        case op_branch0:        return "branch0";
+        case op_define:         return "define";
+        case op_set:            return "set";
     }
     static char opname[32];
     snprintf(opname, 32, "<op %i>", op);
@@ -115,6 +119,8 @@ static void disassemble_code(FILE* f, Code* code) {
                 ip += 2;
                 break;
             
+            case op_set:
+            case op_define:
             case op_lookup: {
                 auto sym = code->symbols[insns[ip+1]];
                 fprintf(f, "%s", symbol_name(sym));
@@ -126,6 +132,14 @@ static void disassemble_code(FILE* f, Code* code) {
                 fprintf(f, "%i", insns[ip+1]);
                 ip += 2;
                 break;
+
+            case op_branch:
+            case op_branch0: {
+                auto dist = insns[ip+1];
+                fprintf(f, "%+i <%i>", dist, ip + dist);
+                ip += 2;
+                break;
+            }
 
             case op_alloc_cont:
             case op_call:

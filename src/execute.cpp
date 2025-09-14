@@ -35,6 +35,10 @@ SXI execute_(Code* code, Continuation* cont, Environment* env) {
         UNIMPLEMENTED(op_call),
         UNIMPLEMENTED(op_tailcall),
         J(op_exit),
+        J(op_branch),
+        J(op_branch0),
+        J(op_define),
+        J(op_set),
     };
 
     NEXT;
@@ -49,6 +53,16 @@ OP(op_lookup):
     ip += 2;
     NEXT;
 
+OP(op_define):
+    env->define(code->symbols[code->insns[ip+1]], tos);
+    ip += 2;
+    NEXT;
+
+OP(op_set):
+    env->set(code->symbols[code->insns[ip+1]], tos);
+    ip += 2;
+    NEXT;
+
 OP(op_ret):
     code = cont->code;
     ip = cont->ip;
@@ -58,6 +72,14 @@ OP(op_ret):
 
 OP(op_exit):
     return tos;
+
+OP(op_branch):
+    ip += code->insns[ip+1];
+    NEXT;
+
+OP(op_branch0):
+    ip += is_truthy(tos) ? 2 : code->insns[ip+1];
+    NEXT;
 
 OP(unimplemented):
     error_f("execute error: opcode '%s' not implemented", get_opcode_name(code->insns[ip]));

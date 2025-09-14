@@ -94,24 +94,24 @@ static void compile_list    (Builder*, bool is_tail, int csp, Pair* list);
 static void compile_literal (Builder*, bool is_tail, int csp, SXI literal);
 static void compile_symbol  (Builder*, bool is_tail, int csp, Symbol* sym);
 
-// static void compile_if      (Builder*, bool is_tail, int begin, int end);
-// static void compile_lambda  (Builder*, bool is_tail, int begin, int end);
-// static void compile_begin   (Builder*, bool is_tail, int begin, int end);
-// static void compile_define  (Builder*, bool is_tail, int begin, int end);
-// static void compile_set     (Builder*, bool is_tail, int begin, int end);
+static void compile_if      (Builder*, bool is_tail, int begin, int end);
+static void compile_begin   (Builder*, bool is_tail, int begin, int end);
+static void compile_define  (Builder*, bool is_tail, int begin, int end);
+static void compile_set     (Builder*, bool is_tail, int begin, int end);
 static void compile_quote   (Builder*, bool is_tail, int begin, int end);
+// static void compile_lambda  (Builder*, bool is_tail, int begin, int end);
 
 struct special_form { 
     Symbol* name; 
     void (*compile)(Builder*, bool is_tail, int begin, int end); 
 };
 static special_form special_forms[] = {
-    // { make_symbol("if"),     compile_if     },
-    // { make_symbol("lambda"), compile_lambda },
-    // { make_symbol("begin"),  compile_begin  },
-    // { make_symbol("define"), compile_define },
-    // { make_symbol("set"),    compile_set    },
+    { make_symbol("if"),     compile_if     },
+    { make_symbol("begin"),  compile_begin  },
+    { make_symbol("define"), compile_define },
+    { make_symbol("set!"),   compile_set    },
     { make_symbol("quote"),  compile_quote  },
+    // { make_symbol("lambda"), compile_lambda },
 };
 
 // Stack for flattening lists into arrays during the compile process
@@ -193,7 +193,86 @@ static void compile_list(Builder* code, bool is_tail, int csp, Pair* list) {
     code->append(is_tail ? op_tailcall : op_call);
 }
 
+static void compile_if(Builder* code, bool is_tail, int begin, int end) {
+    // (if test consequent alternate)
+    // (if test consequent)
+    SXI alternate = [&](){
+        switch (end - begin) {
+            case 3: return c_void;
+            case 4: return compile_stack[begin+3];
+            default: error("compile syntax error: bad if form");
+        }
+    }();
+
+    // test
+    compile_expr(code, false, end, compile_stack[begin+1]);
+
+    // =false, branch to alternate
+    code->appends(op_branch0, INT16_MAX);
+    int branch0 = code->instructions.length - 1;
+
+    // =true, consequent
+    compile_expr(code, is_tail, end, compile_stack[begin+2]);
+    if (not is_tail) {
+        // branch to exit
+        code->appends(op_branch, INT16_MAX);
+    }
+    int branch = code->instructions.length - 1;
+
+    code->instructions[branch0] =
+        (opcode)(code->instructions.length - branch0 + 1);
+
+    // alternate
+    compile_expr(code, is_tail, end, alternate);
+
+    if (not is_tail) {
+        code->instructions[branch] = (opcode)(code->instructions.length - branch + 1);
+    }
+}
+
+static void compile_begin(Builder* code, bool is_tail, int begin, int end) {
+    // (begin exprs...)
+    if (end - begin == 1)
+        // zero length begin form is sxi extension
+        return compile_literal(code, is_tail, end, c_void);
+    for (int i=begin+1; i<end-1; i++) {
+        compile_expr(code, false, end, compile_stack[i]);
+    }
+    compile_expr(code, is_tail, end, compile_stack[end-1]);
+}
+
+static void compile_define(Builder* code, bool is_tail, int begin, int end) {
+    // (define identifier expr)
+    if (end - begin != 3)
+        error("compile syntax error: bad define form");
+
+    compile_expr(code, false, end, compile_stack[begin+2]);
+
+    if (not instance<Symbol>(compile_stack[begin+1]))
+        error("compile syntax error: define identifier not a symbol");
+
+    code->appends(op_define, as<Symbol>(compile_stack[begin+1]));
+
+    if (is_tail) code->append(op_ret);
+}
+
+static void compile_set(Builder* code, bool is_tail, int begin, int end) {
+    // (set! identifier expr)
+    if (end - begin != 3)
+        error("compile syntax error: bad set! form");
+
+    compile_expr(code, false, end, compile_stack[begin+2]);
+
+    if (not instance<Symbol>(compile_stack[begin+1]))
+        error("compile syntax error: set! identifier not a symbol");
+
+    code->appends(op_set, as<Symbol>(compile_stack[begin+1]));
+
+    if (is_tail) code->append(op_ret);
+}
+
 static void compile_quote(Builder* code, bool is_tail, int begin, int end) {
+    // (quote datum)
     if (end - begin != 2)
         error("compile syntax error: bad quote form");
 

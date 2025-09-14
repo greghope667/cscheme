@@ -15,6 +15,10 @@ enum opcode : int16_t {
     op_call,
     op_tailcall,
     op_exit,
+    op_branch,
+    op_branch0,
+    op_define,
+    op_set,
 };
 
 const char* get_opcode_name(opcode op);
