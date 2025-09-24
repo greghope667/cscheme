@@ -13,6 +13,10 @@ const char* sxi::get_tag_name(sxi_tag tag) {
     case SXI_TAG_sym:       return "symbol";
     case SXI_TAG_pair:      return "pair";
     case SXI_TAG_env:       return "environment";
+    case SXI_TAG_function_n:return "function";
+    case SXI_TAG_function_s:return "function";
+    case SXI_TAG_function_1:return "function";
+    case SXI_TAG_lambda:    return "lambda";
     default:                break;
     }
     static char tagname[32];
@@ -55,6 +59,18 @@ static void print_list(FILE* f, Pair* l) {
     fputc(')', f);
 }
 
+static void print_formals(FILE* f, Formals* formals) {
+    fprintf(f, "(");
+    for (int i=0; i<formals->names.length-1; i++) {
+        fprintf(f, "%s ", symbol_name(formals->names[i]));
+    }
+    if (formals->is_variadic)
+        fprintf(f, ". ");
+    if (formals->names.length > 0)
+        fprintf(f, "%s", symbol_name(formals->names[formals->names.length-1]));
+    fprintf(f, ")");
+}
+
 void sxi::print(FILE* f, SXI value) {
     match(value) {
         case_int(i) {
@@ -71,6 +87,12 @@ void sxi::print(FILE* f, SXI value) {
         }
         case_sym(sym) {
             fprintf(f, "%s", symbol_name(sym));
+            break;
+        }
+        case_lambda(lambda) {
+            fprintf(f, "#<lambda %p ", lambda);
+            print_formals(f, lambda->arguments);
+            fputc('>', f);
             break;
         }
         default:
@@ -94,6 +116,7 @@ const char* sxi::get_opcode_name(opcode op) {
         case op_branch0:        return "branch0";
         case op_define:         return "define";
         case op_set:            return "set";
+        case op_lambda:         return "lambda";
     }
     static char opname[32];
     snprintf(opname, 32, "<op %i>", op);
@@ -104,8 +127,8 @@ const char* sxi::get_opcode_name(opcode op) {
 static void disassemble_code(FILE* f, Code* code) {
     auto len = code->insns_len;
     fprintf(
-        f, "CODE: (len %i sym %i lit %i) %p\n", 
-        len, code->symbols_len, code->literals_len, code
+        f, "CODE %p: (len %i sym %i lit %i lambda %i)\n", 
+        code, len, code->symbols_len, code->literals_len, code->lambdas_len
     );
     int ip = 0;
     auto insns = code->insns;
@@ -118,6 +141,15 @@ static void disassemble_code(FILE* f, Code* code) {
                 print(f, code->literals[insns[ip+1]]);
                 ip += 2;
                 break;
+            
+            case op_lambda: {
+                auto lambda = code->lambdas[insns[ip+1]];
+                fprintf(f, "#<protolambda %p ", lambda.code);
+                print_formals(f, lambda.arguments);
+                fprintf(f, ">");
+                ip += 2;
+                break;
+            }
             
             case op_set:
             case op_define:
@@ -151,6 +183,10 @@ static void disassemble_code(FILE* f, Code* code) {
                 break;
         }
         putchar('\n');
+    }
+
+    for (int i=0; i<code->lambdas_len; i++) {
+        disassemble_code(f, code->lambdas[i].code);
     }
 }
 

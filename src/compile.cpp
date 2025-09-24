@@ -12,7 +12,7 @@ using namespace sxi;
 struct Builder {
     static constexpr int OFFSET_MAX = INT16_MAX;
     vector<opcode> instructions;
-    vector<CompiledLambda> lambdas;
+    vector<ProtoLambda> lambdas;
     vector<Symbol*> symbols;
     vector<SXI> literals;
 
@@ -48,7 +48,7 @@ struct Builder {
         _append_object_check_dup(symbols, sym);
     }
 
-    void append(CompiledLambda l) {
+    void append(ProtoLambda l) {
         _append_object(lambdas, l);
     }
 
@@ -83,6 +83,13 @@ struct Builder {
         c->literals = take(literals);
         return c;
     }
+
+    void dealloc() {
+        instructions.dealloc();
+        symbols.dealloc();
+        lambdas.dealloc();
+        literals.dealloc();
+    }
 };
 
 /// Recursive compiler functions ///
@@ -99,7 +106,7 @@ static void compile_begin   (Builder*, bool is_tail, int begin, int end);
 static void compile_define  (Builder*, bool is_tail, int begin, int end);
 static void compile_set     (Builder*, bool is_tail, int begin, int end);
 static void compile_quote   (Builder*, bool is_tail, int begin, int end);
-// static void compile_lambda  (Builder*, bool is_tail, int begin, int end);
+static void compile_lambda  (Builder*, bool is_tail, int begin, int end);
 
 struct special_form { 
     Symbol* name; 
@@ -111,7 +118,7 @@ static special_form special_forms[] = {
     { make_symbol("define"), compile_define },
     { make_symbol("set!"),   compile_set    },
     { make_symbol("quote"),  compile_quote  },
-    // { make_symbol("lambda"), compile_lambda },
+    { make_symbol("lambda"), compile_lambda },
 };
 
 // Stack for flattening lists into arrays during the compile process
@@ -143,6 +150,33 @@ static int flatten_list(int sp, Pair* list) {
             error("compile syntax error: invalid list");
 
         list = as<Pair>(rest);
+    }
+}
+
+static Formals* parse_formals(SXI arg_list) {
+    auto formals = gc_alloc<Formals>();
+    *formals = { .names = {}, .is_variadic = false };
+
+    for (;;) {
+        match(arg_list) {
+            case_pair2(head, rest) {
+                if (not instance<Symbol>(head)) 
+                    error("compile syntax error: invalid formals");
+                formals->names.push(as<Symbol>(head));
+                arg_list = rest;
+                break;
+            }
+            case_sym(sym) {
+                formals->names.push(sym);
+                formals->is_variadic = true;
+                return formals;
+            }
+            default: {
+                if (arg_list == c_null)
+                    return formals;
+                error("compile syntax error: invalid formals");
+            }
+        }
     }
 }
 
@@ -279,16 +313,37 @@ static void compile_quote(Builder* code, bool is_tail, int begin, int end) {
     compile_literal(code, is_tail, end, compile_stack[begin+1]);
 }
 
+static void compile_lambda(Builder* code, bool is_tail, int begin, int end) {
+    // (lambda (<formals>) . body)
+    if (end - begin < 2)
+        error("compile syntax error: bad lambda form");
+
+    auto formals = parse_formals(compile_stack[begin+1]);
+
+    auto code_lambda = [begin, end](){
+        Builder code{};
+        try {
+            compile_begin(&code, true, begin+1, end);
+            return code.finish();
+        } catch (...) {
+            code.dealloc();
+            throw;
+        }
+    }();
+
+    code->appends(op_lambda, ProtoLambda{code_lambda, formals});
+
+    if (is_tail)
+        code->append(op_ret);
+}
+
 static Code* compile_to_code(SXI expr, int csp) {
     Builder code{};
     try {
         compile_expr(&code, true, csp, expr);
         return code.finish();
     } catch (...) {
-        code.instructions.dealloc();
-        code.symbols.dealloc();
-        code.lambdas.dealloc();
-        code.literals.dealloc();
+        code.dealloc();
         throw;
     }
 }

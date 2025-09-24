@@ -19,17 +19,18 @@ enum opcode : int16_t {
     op_branch0,
     op_define,
     op_set,
+    op_lambda,
 };
 
 const char* get_opcode_name(opcode op);
 
-struct CompiledLambda;
+struct ProtoLambda;
 
 struct Code {
     opcode* insns;
     Symbol** symbols;
     SXI* literals;
-    CompiledLambda* lambdas;
+    ProtoLambda* lambdas;
     int16_t insns_len;
     int16_t symbols_len;
     int16_t literals_len;
@@ -54,9 +55,12 @@ struct Thunk {
     Environment* env;
 };
 
-struct CompiledLambda {
+struct ProtoLambda {
     Code* code;
     Formals* arguments;
 };
+
+enum sxi_function_s { SXI_FUNC_apply, SXI_FUNC_current_env, SXI_FUNC_values };
+template <> struct tt::traits<sxi_function_s> : tt::tagged<SXI_TAG_function_s>, tt::unboxed {};
 
 } // sxi

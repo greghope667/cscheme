@@ -1,7 +1,7 @@
 set_languages("gnu23", "gnuxx23")
 
 -- Debug build
-add_cxflags("-O2", "-g3")
+add_cxflags("-Og", "-g3")
 
 add_cxflags("-Wall", "-Wextra", "-march=native")
 add_cxflags("-Iinclude")

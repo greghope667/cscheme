@@ -17,12 +17,11 @@ enum sxi_tag : char {
     SXI_TAG_struct_type,
     SXI_TAG_struct_instance,
 
-    SXI_TAG_function,
+    SXI_TAG_function_n,
+    SXI_TAG_function_1,
+    SXI_TAG_function_s,
     SXI_TAG_lambda,
     SXI_TAG_thunk,
-
-    SXI_TAG_formals,
-    SXI_TAG_code,
 };
 
 // The core scheme data type used throughout the interpreter
@@ -68,6 +67,7 @@ template <typename T> struct traits;
 template <sxi_tag t> struct tagged { static constexpr sxi_tag tag = t; };
 struct boxed { static constexpr bool is_boxed = true; };
 struct unboxed { static constexpr bool is_unboxed = true; };
+struct fptr { static constexpr bool is_fptr = true; };
 
 template <typename T> constexpr sxi_tag tag = traits<T>::tag;
 }
@@ -84,6 +84,13 @@ requires (tt::traits<T>::is_boxed)
 constexpr inline SXI
 wrap(T* t) {
     return { ._tag = tt::tag<T>, ._pointer=static_cast<void*>(t) };
+}
+
+template <typename T>
+requires (tt::traits<T>::is_fptr)
+constexpr inline SXI
+wrap(T t) {
+    return { ._tag = tt::tag<T>, ._pointer=reinterpret_cast<void*>(t) };
 }
 
 // inline SXI wrap(SXI s) { return s; }
@@ -104,6 +111,15 @@ as(SXI s) {
     if (s._tag != tt::tag<T>)
         type_error(tt::tag<T>, s);
     return static_cast<T*>(s._pointer);
+}
+
+template <typename T>
+requires(tt::traits<T>::is_fptr)
+constexpr inline T
+as(SXI s) {
+    if (s._tag != tt::tag<T>)
+        type_error(tt::tag<T>, s);
+    return reinterpret_cast<T>(s._pointer);
 }
 
 template <typename T>
@@ -149,7 +165,6 @@ constexpr inline bool is_truthy(SXI sxi) {
 typedef intptr_t sxi_int;
 template <> struct tt::traits<sxi_int> : tt::tagged<SXI_TAG_int>, tt::unboxed {};
 
-
 /// Pairs ///
 // Cons pairs - the fundamental data structure.
 // These MUST be heap allocated (like all compound data types here)
@@ -191,7 +206,7 @@ Symbol* gensym();
 struct Environment;
 template <> struct tt::traits<Environment> : tt::tagged<SXI_TAG_env>, tt::boxed {};
 
-Environment* make_environment(Environment* parent); // parent is nullable
+Environment* make_environment(Environment* parent = nullptr);
 Environment* make_environment_rootlet();
 void env_define(Environment*, const Symbol* name, SXI value);
 void env_set(Environment*, const Symbol* name, SXI value);
@@ -212,6 +227,14 @@ struct Lambda;
 template <> struct tt::traits<Lambda> : tt::tagged<SXI_TAG_lambda>, tt::boxed {};
 
 void disassemble(FILE*, const Lambda*);
+
+/// C-Functions ///
+
+using Function_n = SXI (*)(SXI*, ptrdiff_t);
+template <> struct tt::traits<Function_n> : tt::tagged<SXI_TAG_function_n>, tt::fptr {};
+
+using Function_1 = SXI (*)(SXI);
+template <> struct tt::traits<Function_1> : tt::tagged<SXI_TAG_function_1>, tt::fptr {};
 
 /// Read ///
 

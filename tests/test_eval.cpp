@@ -2,9 +2,13 @@
 #include <acutest.h>
 #include "memstream.hpp"
 
-static void eval_and_compare(const char* input, const char* expected) {
+static void eval_and_compare(
+    const char* input, 
+    const char* expected, 
+    sxi::Environment* parent_env = nullptr
+) {
     auto r = sxi::read(InStream{input}.f);
-    auto env = sxi::make_environment(nullptr);
+    auto env = sxi::make_environment(parent_env);
     auto c = sxi::compile(r, env);
     auto e = sxi::execute(c);
     OutStream out;
@@ -75,6 +79,25 @@ static void test_set() {
         )", "2");
 }
 
+static void test_lambda() {
+    eval_and_compare("((lambda () 1))", "1");
+    eval_and_compare("((lambda (x) x) 1)", "1");
+}
+
+static void test_calls() {
+    auto env = sxi::make_environment();
+    auto add = +[](sxi::SXI* p, ptrdiff_t n) {
+        sxi::sxi_int total = 0;
+        for (int i=0; i<n; i++)
+            total += as<sxi::sxi_int>(p[i]);
+        return sxi::wrap(total);
+    };
+    sxi::env_define(env, sxi::make_symbol("+"), wrap(add));
+    eval_and_compare("(+ 1 1)", "2", env);
+    eval_and_compare("(+ (+ 1 2) 3)", "6", env);
+    eval_and_compare("(+ (+ 1 2 3) 4 5 6)", "21", env);
+}
+
 TEST_LIST = {
     { "test_constant", test_constant },
     { "test_quote", test_quote },
@@ -84,5 +107,7 @@ TEST_LIST = {
     { "test_begin", test_begin },
     { "test_define", test_define },
     { "test_set!", test_set },
-    { NULL, NULL},
+    { "test_calls", test_calls },
+    { "test_lambda", test_lambda },
+    { NULL, NULL },
 };

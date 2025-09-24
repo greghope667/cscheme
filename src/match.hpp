@@ -11,7 +11,6 @@
 
 #define case_const(constant) case_val(sxi_constant,constant)
 #define case_int(i) case_val(sxi_int,i)
-// #define case_irform(ir) case_val(sxi_ir_forms,ir)
 
 #define case_pair(pair) case_ptr(Pair,pair)
 #define case_pair2(car, cdr) \
@@ -19,6 +18,4 @@
 
 #define case_sym(sym) case_ptr(Symbol,sym)
 #define case_env(env) case_ptr(Environment,env)
-#define case_cont(cont) case_ptr(sxi_continuation,cont)
-#define case_lambda(lambda) case_ptr(sxi_lambda,lambda)
-#define case_vector(vector) case_ptr(sxi_vector,vector)
+#define case_lambda(lambda) case_ptr(Lambda,lambda)

@@ -4,6 +4,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <sys/resource.h>
+
 static bool rep(FILE* f, sxi::Environment* env) {
     SXI_TRY {
         auto r = sxi::read(f);
@@ -41,10 +43,36 @@ struct options_s {
     }
 };
 
+void add_defines(sxi::Environment* env) {
+    sxi::env_define(env, sxi::make_symbol("+"),
+        wrap(+[](sxi::SXI* p, ptrdiff_t n) {
+            sxi::sxi_int total = 0;
+            for (int i=0; i<n; i++)
+                total += as<sxi::sxi_int>(p[i]);
+            return sxi::wrap(total);
+        })
+    );
+    sxi::env_define(env, sxi::make_symbol("~"),
+        wrap(+[](sxi::SXI v) {
+            return sxi::wrap(~as<sxi::sxi_int>(v));
+        })
+    );
+}
+
 int main(int argc, char** argv) {
     auto options = options_s::parse(argc, argv);
 
-    auto env = sxi::make_environment(nullptr);
+    auto env = sxi::make_environment();
+    add_defines(env);
+
+    {
+        rlimit limit{};
+        getrlimit(RLIMIT_AS, &limit);
+        limit.rlim_cur = 128 * 1024 * 1024;
+        setrlimit(RLIMIT_AS, &limit);
+        printf("RLIMIT_AS: cur %li max %li\n", limit.rlim_cur, limit.rlim_max);
+    }
+
     if (options.expr) {
         auto stream = fmemopen((void*)options.expr, strlen(options.expr), "r");
         rep(stream, env);
