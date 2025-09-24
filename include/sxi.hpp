@@ -14,8 +14,8 @@ enum sxi_tag : char {
     SXI_TAG_pair,
     SXI_TAG_env,
     SXI_TAG_vector,
-    SXI_TAG_struct_type,
-    SXI_TAG_struct_instance,
+    // SXI_TAG_struct_type,
+    // SXI_TAG_struct_instance,
 
     SXI_TAG_function_n,
     SXI_TAG_function_1,
@@ -76,21 +76,21 @@ template <typename T>
 requires (tt::traits<T>::is_unboxed)
 constexpr inline SXI
 wrap(T t) {
-    return { ._tag = tt::tag<T>, ._integer=static_cast<intptr_t>(t) };
+    return { ._pad = tt::tag<T>, ._integer=static_cast<intptr_t>(t) };
 }
 
 template <typename T>
 requires (tt::traits<T>::is_boxed)
 constexpr inline SXI
 wrap(T* t) {
-    return { ._tag = tt::tag<T>, ._pointer=static_cast<void*>(t) };
+    return { ._pad = tt::tag<T>, ._pointer=static_cast<void*>(t) };
 }
 
 template <typename T>
 requires (tt::traits<T>::is_fptr)
 constexpr inline SXI
 wrap(T t) {
-    return { ._tag = tt::tag<T>, ._pointer=reinterpret_cast<void*>(t) };
+    return { ._pad = tt::tag<T>, ._pointer=reinterpret_cast<void*>(t) };
 }
 
 // inline SXI wrap(SXI s) { return s; }
@@ -245,6 +245,10 @@ SXI read(FILE*);
 void print(FILE*, SXI value);
 const char* get_constant_name(sxi_constant c);
 const char* get_tag_name(sxi_tag t);
+
+/// GC ///
+
+void gc_protect(SXI value);
 
 } // sxi
 

@@ -82,6 +82,7 @@ static void test_set() {
 static void test_lambda() {
     eval_and_compare("((lambda () 1))", "1");
     eval_and_compare("((lambda (x) x) 1)", "1");
+    eval_and_compare("((lambda (f) (f 1)) (lambda (x) x))", "1");
 }
 
 static void test_calls() {

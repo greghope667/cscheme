@@ -34,7 +34,7 @@ struct vector {
     void push(T x) {
         if (length == capacity) {
             int new_cap = capacity < 4 ? 4 : capacity*2;
-            data = (T*)sxi_realloc(data, capacity*sizeof(T), new_cap*sizeof(T));
+            data = sxi::realloc(data, capacity, new_cap);
             capacity = new_cap;
         }
         data[length++] = x;
@@ -42,18 +42,18 @@ struct vector {
 
     void reserve(int count) {
         if (count > capacity) {
-            data = (T*)sxi_realloc(data, capacity*sizeof(T), count*sizeof(T));
+            data = sxi::realloc(data, capacity, count);
             capacity = count;
         }
     }
 
     void dealloc() {
-        sxi_free(data, capacity);
+        sxi::free(data, capacity);
         *this = {};
     }
 
     void shrink_to_fit() {
-        data = (T*)sxi_realloc(data, capacity*sizeof(T), length*sizeof(T));
+        data = sxi::realloc(data, capacity, length);
         capacity = length;
     }
 
@@ -116,7 +116,7 @@ struct insert_only_map {
 
     void reindex() {
         unsigned new_len = 1u << (33 - __builtin_clz((unsigned)items.length));
-        index = (int*)sxi_realloc(index, index_length * sizeof(int), new_len * sizeof(int));
+        index = sxi::realloc(index, index_length, new_len);
         index_length = new_len;
 
         memset(index, -1, index_length * sizeof(int));
@@ -134,6 +134,11 @@ struct insert_only_map {
             }
         }
     }
+
+    void dealloc() {
+        sxi::free(index, index_length);
+        items.dealloc();
+    }
 };
 
 /* Technically dodgy but probably fine
@@ -148,5 +153,11 @@ namespace std {
     template <typename T> constexpr const T* begin(initializer_list<T> i) { return i.data; }
     template <typename T> constexpr const T* end(initializer_list<T> i) { return i.data + i.length; }
 }
+
+#ifndef NDEBUG
+#define SXI_UNREACHABLE assert(false)
+#else
+#define SXI_UNREACHABLE __builtin_unreachable()
+#endif
 
 } // sxi

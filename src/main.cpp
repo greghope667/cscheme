@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
 
     auto env = sxi::make_environment();
     add_defines(env);
+    gc_protect(wrap(env));
 
     {
         rlimit limit{};

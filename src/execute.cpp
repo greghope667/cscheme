@@ -12,15 +12,6 @@
 
 using namespace sxi;
 
-struct Continuation {
-    Code* code;
-    int ip;
-    Continuation* next;
-    Environment* env;
-    Vector* stack;
-};
-template <> struct tt::traits<Continuation> : tt::boxed {};
-
 static Environment*
 bind_lambda(Lambda* l, span<SXI> args) {
     if (l->arguments->is_variadic)
@@ -154,6 +145,8 @@ OP(op_tailcall): {
     }
 
 OP(op_ret):
+    if (gc_allocations > 4096)
+        gc_run(cont, tos);
     code = cont->code;
     ip = cont->ip;
     env = cont->env;

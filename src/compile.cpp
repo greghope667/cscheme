@@ -128,17 +128,13 @@ static int compile_stack_length;
 
 static int flatten_list(int sp, Pair* list) {
     if (compile_stack_length == 0) {
-        compile_stack = (SXI*)malloc(4 * sizeof(SXI));
+        compile_stack = alloc<SXI>(4);
         compile_stack_length = 4;
     }
 
     for (;;) {
         if (sp == compile_stack_length) {
-            compile_stack_length *= 2;
-            compile_stack = (SXI*)realloc(
-                compile_stack, 
-                compile_stack_length * sizeof(SXI)
-            );
+            compile_stack = realloc_x2(compile_stack, compile_stack_length);
         }
         auto [first, rest] = *list;
         compile_stack[sp++] = first;

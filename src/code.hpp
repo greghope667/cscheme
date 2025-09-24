@@ -2,6 +2,7 @@
 
 #include "sxi.hpp"
 #include "tl.hpp"
+#include "vector.hpp"
 
 namespace sxi {
 
@@ -62,5 +63,14 @@ struct ProtoLambda {
 
 enum sxi_function_s { SXI_FUNC_apply, SXI_FUNC_current_env, SXI_FUNC_values };
 template <> struct tt::traits<sxi_function_s> : tt::tagged<SXI_TAG_function_s>, tt::unboxed {};
+
+struct Continuation {
+    Code* code;
+    int ip;
+    Continuation* next;
+    Environment* env;
+    Vector* stack;
+};
+template <> struct tt::traits<Continuation> : tt::boxed {};
 
 } // sxi

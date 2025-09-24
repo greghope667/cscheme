@@ -26,6 +26,14 @@ realloc(T* ptr, int old_count, int new_count) {
     return (T*)sxi_realloc(ptr, old_count * sizeof(T), new_count * sizeof(T));
 }
 
+template <typename T, typename I>
+inline T*
+realloc_x2(T* ptr, I& count) {
+    I old_count = count;
+    count *= 2;
+    return realloc(ptr, old_count, count);
+}
+
 template <typename T>
 inline void
 free(T* ptr, int count) {

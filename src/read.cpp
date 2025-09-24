@@ -1,4 +1,5 @@
 #include "sxi.hpp"
+#include "tl.hpp"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -129,7 +130,7 @@ static SXI read_value(reader r, token first) {
         case rparen: case dot:
             error("read error: unexpected token");
     }
-    assert(false);
+    SXI_UNREACHABLE;
 }
 
 static SXI read_value(reader r) {
