@@ -6,8 +6,7 @@ namespace sxi {
 
 inline int gc_allocations;
 
-template <typename T>
-requires(tt::traits<T>::is_boxed)
+template <tt::Boxed T>
 T* gc_alloc();
 
 void gc_protect(SXI value);

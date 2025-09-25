@@ -28,9 +28,9 @@ bind_lambda(Lambda* l, span<SXI> args) {
     env->table.items.length = len;
 
     for (int i=0; i<len; i++) {
-        env->table.items[i] = { 
-            .key = l->arguments->names[i], 
-            .value = args[i] 
+        env->table.items[i] = {
+            .key = l->arguments->names[i],
+            .value = args[i]
         };
     }
     return env;
@@ -124,11 +124,11 @@ OP(op_tailcall): {
         auto args = span<SXI>(stack->data + 1, stack->length - 1);
         match(function) {
             case_val(Function_n, f) {
-                tos = f(args.data, args.length);
+                tos = f(args.length, args.data);
                 goto* &&OP(op_ret);
             }
             case_val(Function_1, f) {
-                if (args.length != 1) 
+                if (args.length != 1)
                     invalid_arguments(function, args);
                 tos = f(args[0]);
                 goto* &&OP(op_ret);

@@ -45,7 +45,7 @@ struct options_s {
 
 void add_defines(sxi::Environment* env) {
     sxi::env_define(env, sxi::make_symbol("+"),
-        wrap(+[](sxi::SXI* p, ptrdiff_t n) {
+        wrap(+[](int n, sxi::SXI* p) {
             sxi::sxi_int total = 0;
             for (int i=0; i<n; i++)
                 total += as<sxi::sxi_int>(p[i]);
@@ -62,7 +62,7 @@ void add_defines(sxi::Environment* env) {
 int main(int argc, char** argv) {
     auto options = options_s::parse(argc, argv);
 
-    auto env = sxi::make_environment();
+    auto env = sxi::interaction_environment();
     add_defines(env);
     gc_protect(wrap(env));
 

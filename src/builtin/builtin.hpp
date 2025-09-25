@@ -1,0 +1,33 @@
+#pragma once
+
+#include "sxi.hpp"
+#include "../tl.hpp"
+
+struct function_1_def {
+    const char* name;
+    sxi::Function_1 function;
+};
+
+struct function_n_def {
+    const char* name;
+    sxi::Function_n function;
+};
+
+struct builtin_lib {
+    sxi::span<const function_1_def> function_1;
+    sxi::span<const function_n_def> function_n;
+
+    template <size_t A, size_t B>
+    consteval builtin_lib(const function_1_def (&a)[A], const function_n_def(&b)[B])
+    : function_1(&a[0], A), function_n(&b[0], B) {}
+};
+
+#define SXI_CHECK_ARITY(min, max) \
+    do { \
+        if (argc < min || argc > max) \
+            sxi::invalid_arguments(__FUNCTION__, sxi::span(argv, argc)); \
+    } while (0)
+
+namespace sxi {
+extern const builtin_lib builtin_lib_list;
+}

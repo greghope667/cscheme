@@ -141,6 +141,8 @@ struct insert_only_map {
     }
 };
 
+} // sxi
+
 /* Technically dodgy but probably fine
  * Making a tiny std so that <initializer_list> range-for loops work correctly */
 namespace std {
@@ -159,5 +161,3 @@ namespace std {
 #else
 #define SXI_UNREACHABLE __builtin_unreachable()
 #endif
-
-} // sxi

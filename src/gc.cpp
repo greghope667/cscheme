@@ -19,6 +19,8 @@ static void* alloc_block() {
 
     if (block_count == 0) {
         blocks = (char*)aligned_alloc(BLOCK_SIZE, BLOCK_ALLOC_COUNT * BLOCK_SIZE);
+        if (not blocks)
+            error("out of memory");
         block_count = BLOCK_ALLOC_COUNT;
     }
 
@@ -55,7 +57,7 @@ struct allocator {
     static constexpr size_t N = (BLOCK_SIZE / (1 + item_size)) & ~0xfzu;
 
     enum state : unsigned char {
-        inactive,
+        inactive = 0,
         active,
         marked,
     };
@@ -133,6 +135,7 @@ struct allocator {
         }
 
         auto b = reinterpret_cast<block*>(alloc_block());
+        memset(b->states, inactive, N);
         blocks.push(b);
         next_index = 1;
         return b->alloc(&b->entries[0].t);
@@ -159,8 +162,7 @@ struct allocator {
 
 template <typename T> allocator<T> allocator<T>::instance = {};
 
-template <typename T>
-requires(tt::traits<T>::is_boxed)
+template <tt::Boxed T>
 T* sxi::gc_alloc() {
     return allocator<T>::instance.alloc();
 }
@@ -180,8 +182,7 @@ static void mark(SXI value) {
     #undef X
 }
 
-template <typename T>
-requires (tt::traits<T>::is_boxed)
+template <tt::Boxed T>
 static void mark(T* x) {
     if (x)
         allocator<T>::instance.mark(x);
@@ -242,7 +243,7 @@ void mark_children(Continuation* c) {
 
 /// Deallocation of memory from outside pool
 
-template <typename T> 
+template <typename T>
 static void deallocate(T*) {};
 
 template <>

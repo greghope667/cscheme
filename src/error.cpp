@@ -29,7 +29,7 @@ static char error_buffer[4096];
 [[noreturn]] void sxi::type_error(sxi_tag expected, SXI actual) {
     FILE* f = fmemopen(error_buffer, sizeof(error_buffer), "w");
     fprintf(
-        f, "type error: expected %s, got %s ", 
+        f, "type error: expected %s, got %s ",
         get_tag_name(expected), get_tag_name(actual._tag)
     );
     print(f, actual);
@@ -42,6 +42,23 @@ static char error_buffer[4096];
     fprintf(f, "invalid argument error:\nfunction: ");
     print(f, function);
     fprintf(f, "\ncalled with arguments: ( ");
+    for (auto arg : args) {
+        print(f, arg);
+        fputc(' ', f);
+    }
+    fputc(')', f);
+    fclose(f);
+    SXI_THROW;
+}
+
+[[noreturn]] void sxi::invalid_arguments(const char* funcname, span<SXI> args) {
+    FILE* f = fmemopen(error_buffer, sizeof(error_buffer), "w");
+    fprintf(f,
+        "invalid argument error:\n"
+        "function: %s\n"
+        "called with arguments: ( ",
+        funcname
+    );
     for (auto arg : args) {
         print(f, arg);
         fputc(' ', f);

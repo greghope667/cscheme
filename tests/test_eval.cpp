@@ -9,8 +9,7 @@ static void eval_and_compare(
 ) {
     auto r = sxi::read(InStream{input}.f);
     auto env = sxi::make_environment(parent_env);
-    auto c = sxi::compile(r, env);
-    auto e = sxi::execute(c);
+    auto e = sxi::eval(r, env);
     OutStream out;
     sxi::print(out.f, e);
     TEST_CHECK(out.str() == expected);
@@ -87,7 +86,7 @@ static void test_lambda() {
 
 static void test_calls() {
     auto env = sxi::make_environment();
-    auto add = +[](sxi::SXI* p, ptrdiff_t n) {
+    auto add = +[](int n, sxi::SXI* p) {
         sxi::sxi_int total = 0;
         for (int i=0; i<n; i++)
             total += as<sxi::sxi_int>(p[i]);

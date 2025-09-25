@@ -69,34 +69,37 @@ struct boxed { static constexpr bool is_boxed = true; };
 struct unboxed { static constexpr bool is_unboxed = true; };
 struct fptr { static constexpr bool is_fptr = true; };
 
+template <typename T> concept Unboxed = traits<T>::is_unboxed;
+template <typename T> concept Boxed = traits<T>::is_boxed;
+template <typename T> concept Fptr = traits<T>::is_fptr;
+
 template <typename T> constexpr sxi_tag tag = traits<T>::tag;
 }
 
-template <typename T>
-requires (tt::traits<T>::is_unboxed)
+template <tt::Unboxed T>
 constexpr inline SXI
 wrap(T t) {
     return { ._pad = tt::tag<T>, ._integer=static_cast<intptr_t>(t) };
 }
 
-template <typename T>
-requires (tt::traits<T>::is_boxed)
+template <tt::Boxed T>
 constexpr inline SXI
 wrap(T* t) {
     return { ._pad = tt::tag<T>, ._pointer=static_cast<void*>(t) };
 }
 
-template <typename T>
-requires (tt::traits<T>::is_fptr)
+template <tt::Fptr T>
 constexpr inline SXI
 wrap(T t) {
     return { ._pad = tt::tag<T>, ._pointer=reinterpret_cast<void*>(t) };
 }
 
+constexpr inline SXI
+wrap(SXI v) { return v; }
+
 // inline SXI wrap(SXI s) { return s; }
 
-template <typename T>
-requires(tt::traits<T>::is_unboxed)
+template <tt::Unboxed T>
 constexpr inline T
 as(SXI s) {
     if (s._tag != tt::tag<T>)
@@ -104,8 +107,7 @@ as(SXI s) {
     return static_cast<T>(s._integer);
 }
 
-template <typename T>
-requires(tt::traits<T>::is_boxed)
+template <tt::Boxed T>
 constexpr inline T*
 as(SXI s) {
     if (s._tag != tt::tag<T>)
@@ -113,8 +115,7 @@ as(SXI s) {
     return static_cast<T*>(s._pointer);
 }
 
-template <typename T>
-requires(tt::traits<T>::is_fptr)
+template <tt::Fptr T>
 constexpr inline T
 as(SXI s) {
     if (s._tag != tt::tag<T>)
@@ -188,6 +189,14 @@ inline SXI cons(SXI first, SXI second) {
     return wrap(make_pair(first, second));
 }
 
+template <size_t N>
+static inline SXI list(const SXI (&ls)[N]) {
+    SXI head = c_null;
+    for (auto i = N; i --> 0;)
+        head = cons(ls[i], head);
+    return head;
+}
+
 /// Symbols (interned) ///
 
 struct Symbol;
@@ -208,9 +217,11 @@ template <> struct tt::traits<Environment> : tt::tagged<SXI_TAG_env>, tt::boxed 
 
 Environment* make_environment(Environment* parent = nullptr);
 Environment* make_environment_rootlet();
+Environment* interaction_environment();
 void env_define(Environment*, const Symbol* name, SXI value);
 void env_set(Environment*, const Symbol* name, SXI value);
 SXI env_lookup(const Environment*, const Symbol* name);
+bool env_try_lookup(const Environment*, const Symbol* name, SXI* value_out);
 
 /// Thunks (0-argument procedures) ///
 
@@ -230,7 +241,7 @@ void disassemble(FILE*, const Lambda*);
 
 /// C-Functions ///
 
-using Function_n = SXI (*)(SXI*, ptrdiff_t);
+using Function_n = SXI (*)(int, SXI*);
 template <> struct tt::traits<Function_n> : tt::tagged<SXI_TAG_function_n>, tt::fptr {};
 
 using Function_1 = SXI (*)(SXI);
@@ -239,6 +250,10 @@ template <> struct tt::traits<Function_1> : tt::tagged<SXI_TAG_function_1>, tt::
 /// Read ///
 
 SXI read(FILE*);
+
+/// Eval ///
+
+SXI eval(SXI expr, Environment* env);
 
 /// Print ///
 

@@ -40,6 +40,18 @@ struct Environment {
         }
         error_f("variable %s not defined", sxi::symbol_name(name));
     }
+
+    bool try_lookup(const Symbol* name, SXI* value_out) {
+        auto hash = symbol_hash(name);
+        for (auto* env = this; env; env = env->parent) {
+            auto [found, loc] = env->table.lookup(name, hash);
+            if (found) {
+                *value_out = env->table.items[loc].value;
+                return true;
+            }
+        }
+        return false;
+    }
 };
 
 } // sxi

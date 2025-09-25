@@ -1,16 +1,10 @@
 #pragma once
 
-#include <stdlib.h>
+#include <stddef.h>
 
-inline void* sxi_malloc(size_t size) { return ::malloc(size); }
-inline void* sxi_realloc(void* p, size_t old_size, size_t new_size) {
-    (void)old_size;
-    return ::realloc(p, new_size);
-}
-inline void sxi_free(void* p, size_t size) {
-    (void)size;
-    ::free(p); 
-}
+void* sxi_malloc(size_t size);
+void* sxi_realloc(void* p, size_t old_size, size_t new_size);
+void sxi_free(void* p, size_t size);
 
 namespace sxi {
 

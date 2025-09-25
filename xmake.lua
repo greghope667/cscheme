@@ -9,7 +9,7 @@ add_cxflags("-Iinclude")
 target("scheme")
 --     set_kind("shared")
     set_kind("static")
-    add_files("src/*.cpp|main.cpp")
+    add_files("src/*.cpp|main.cpp", "src/builtin/*.cpp")
 
 target("scheme-repl")
     set_kind("binary")
