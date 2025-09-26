@@ -1,5 +1,6 @@
 #include "sxi.hpp"
 #include "tl.hpp"
+#include "string.hpp"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -16,6 +17,9 @@ enum token_tag {
     // quasiquote,
     // unquote,
     // unquote_splicing,
+    lambda,
+    tcharacter,
+    string,
 };
 
 struct token {
@@ -63,12 +67,74 @@ static int read_identifier(reader r, char first, char out[sxi::MAX_SYMBOL_LENGTH
     return size;
 }
 
+static sxi::character read_character(reader r) {
+    int ch = r.getc();
+    if (ch == EOF)
+        sxi::error("read error: unexpected eof");
+    if (ch < 'a' || ch > 'z')
+        return ch;
+
+    char buffer[sxi::MAX_SYMBOL_LENGTH];
+    auto len = read_identifier(r, ch, buffer);
+
+    if (len == 1)
+        return ch;
+
+    buffer[len] = 0;
+
+    if (ch == 'x') {
+        char* end;
+        auto i = strtoll(buffer+1, &end, 16);
+        if (end == &buffer[len] && 0 <= i && i < 256)
+            return i;
+    } else {
+        for (auto [name, ch] : sxi::character_names)
+            if (strcmp(name, buffer) == 0)
+                return ch;
+    }
+
+    sxi::error_f("read error: unknown character escape sequence: \%s", buffer);
+}
+
 static token read_hash(reader r) {
     switch (int ch = r.getc(); ch) {
         case EOF:   sxi::error_f("read error: unexpected eof");
         case 't':   return { .tag = boolean, .data = true };
         case 'f':   return { .tag = boolean, .data = false };
+        case '\\':  return { .tag = tcharacter, .data = read_character(r) };
         default:    sxi::error_f("read error: illegal escape: '#%c'", ch);
+    }
+}
+
+static void read_string_escape(reader r, sxi::String* str) {
+    auto ch = r.getc();
+    if (ch == ' ' || ch == '\r' || ch == '\t' || ch == '\n') {
+        while (ch != '\n' && ch != EOF) ch = r.getc();
+        return;
+    }
+    for (auto [escape, chr] : sxi::string_escapes) {
+        if (ch == escape) {
+            str->push(chr);
+            return;
+        }
+    }
+    sxi::error_f("read error: unknown string escape sequence: \\%c", ch);
+}
+
+static token read_string(reader r) {
+    auto str = sxi::make_string();
+    for (;;) {
+        switch (int ch = r.getc(); ch) {
+            case EOF:
+                sxi::error("read error: unexpected eof");
+            case '"':
+                return { .tag = string, .data = (intptr_t)str };
+            case '\\':
+                read_string_escape(r, str);
+                break;
+            default:
+                str->push(ch);
+        }
     }
 }
 
@@ -88,6 +154,13 @@ static token read_token(reader r) {
             return { .tag = quote, .data=0 };
         case ' ': case '\n': case '\t': case '\r':
             goto skip_space;
+        case ';':
+            do { ch = r.getc(); } while (ch != EOF && ch != '\n');
+            goto skip_space;
+        case '\\': // extension: (\(args) body) -> (lambda (args) body)
+            return { .tag = lambda, .data=0 };
+        case '"':
+            return read_string(r);
     }
     if (not isident(ch))
         sxi::error_f("read error: unexpected character '%c'", ch);
@@ -113,9 +186,10 @@ static SXI read_list(reader r);
 static SXI read_value(reader r);
 
 static Symbol* const symbol_quote = sxi::make_symbol("quote");
+static Symbol* const symbol_lambda = sxi::make_symbol("lambda");
 
 static SXI read_quote_form(reader r, Symbol* quote) {
-    return cons(wrap(quote), cons(read_value(r), c_null));
+    return list({wrap(quote), read_value(r)});
 }
 
 static SXI read_value(reader r, token first) {
@@ -124,8 +198,11 @@ static SXI read_value(reader r, token first) {
         case eof:           return c_eof;
         case lparen:        return read_list(r);
         case integer:       return wrap<sxi_int>(first.data);
-        case ident:         return wrap<Symbol>((Symbol*)first.data);
+        case ident:         return wrap((Symbol*)first.data);
         case quote:         return read_quote_form(r, symbol_quote);
+        case lambda:        return wrap(symbol_lambda);
+        case tcharacter:    return wrap(sxi::character(first.data));
+        case string:        return wrap((sxi::String*)first.data);
 
         case rparen: case dot:
             error("read error: unexpected token");

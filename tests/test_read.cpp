@@ -5,6 +5,7 @@
 static void read_compare(const char* input, sxi::SXI expected) {
     auto value = sxi::read(InStream(input).f);
     TEST_CHECK(value == expected);
+    TEST_MSG("input: %s", input);
 }
 
 static void read_print_compare(const char* input, const char* expected) {
@@ -20,7 +21,7 @@ static void read_print_compare(const char* input, const char* expected) {
 
 using namespace sxi;
 
-void test_read_int() {
+static void test_read_int() {
     read_compare("123", wrap(123z));
     read_compare("0", wrap(0z));
 
@@ -31,28 +32,54 @@ void test_read_int() {
     TEST_CHECK(read(in.f) == wrap(7890z));
 }
 
-void test_read_constants() {
+static void test_read_constants() {
     read_compare("", c_eof);
     read_compare("#t", c_true);
     read_compare("#f", c_false);
     read_compare("()", c_null);
 }
 
-void test_read_list() {
+static void test_read_list() {
     read_print_compare("(1  2  3)", "(1 2 3)");
     read_print_compare("(1 . 2)", "(1 . 2)");
     read_print_compare("(1 . (2 . (3 . ())))", "(1 2 3)");
 }
 
-void test_read_symbols() {
+static void test_read_symbols() {
     read_print_compare("abc", "abc");
     read_print_compare("(a b c)", "(a b c)");
 }
 
-void test_read_quote() {
+static void test_read_quote() {
     read_print_compare("'1", "(quote 1)");
     read_print_compare("'(1 2)", "(quote (1 2))");
     // read_print_compare("'", "(quote #eof)"); <-- desired?
+}
+
+static void test_read_comment() {
+    read_print_compare("(1 2 ; some garbage \n 3)", "(1 2 3)");
+    read_print_compare("; 123", "#eof");
+}
+
+static void test_read_chars() {
+    struct { const char* in; sxi::character ch; } cases[] = {
+        { "#\\a",         'a' },
+        { "#\\A",         'A' },
+        { "#\\(",         '(' },
+        { "#\\ ",         ' ' },
+        { "#\\x61",       'a' },
+        { "#\\alarm",      7  },
+        { "#\\backspace",  8  },
+        { "#\\delete",   0x7f },
+        { "#\\escape",   '\e' },
+        { "#\\newline",  '\n' },
+        { "#\\null",     '\0' },
+        { "#\\return",   '\r' },
+        { "#\\space",     ' ' },
+        { "#\\tab",      '\t' },
+    };
+    for (auto [in, ch] : cases) read_compare(in, wrap(ch));
+    TEST_EXCEPTION(sxi::read(InStream("#\\").f);, sxi::Error);
 }
 
 TEST_LIST = {
@@ -61,5 +88,7 @@ TEST_LIST = {
     { "test_read_list", test_read_list },
     { "test_read_symbols", test_read_symbols },
     { "test_read_quote", test_read_quote },
+    { "test_read_comment", test_read_comment },
+    { "test_read_chars", test_read_chars },
     { NULL, NULL },
 };

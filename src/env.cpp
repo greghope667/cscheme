@@ -1,3 +1,4 @@
+#include "code.hpp"
 #include "sxi.hpp"
 #include "env.hpp"
 #include "builtin/builtin.hpp"
@@ -32,6 +33,8 @@ Environment* sxi::make_environment_rootlet() {
     };
 
     add(builtin_lib_list);
+
+    env->define(make_symbol("apply"), wrap(SXI_FUNC_apply));
 
     return env;
 }

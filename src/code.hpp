@@ -61,8 +61,8 @@ struct ProtoLambda {
     Formals* arguments;
 };
 
-enum sxi_function_s { SXI_FUNC_apply, SXI_FUNC_current_env, SXI_FUNC_values };
-template <> struct tt::traits<sxi_function_s> : tt::tagged<SXI_TAG_function_s>, tt::unboxed {};
+enum Function_s { SXI_FUNC_apply, SXI_FUNC_current_env, SXI_FUNC_values };
+template <> struct tt::traits<Function_s> : tt::tagged<SXI_TAG_function_s>, tt::unboxed {};
 
 struct Continuation {
     Code* code;

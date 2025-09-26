@@ -26,10 +26,10 @@ struct listerate {
     struct iterator {
         SXI value;
         iterator& operator++() {
-            value = as<Pair>(value)->second;
+            value = cdr(value);
             return *this;
         }
-        SXI operator*() { return as<Pair>(value)->first; }
+        SXI operator*() { return car(value); }
         bool operator==(sentinel) { return value == c_null; }
     } it;
 
@@ -44,7 +44,7 @@ static SXI list_p(SXI x) {
         if (x == c_null) return c_true;
         if (not instance<Pair>(x))
             return c_false;
-        x = as<Pair>(x)->second;
+        x = cdr(x);
     }
 }
 
@@ -92,13 +92,13 @@ static SXI list_tail(int argc, SXI* argv) {
 }
 
 static SXI list_ref(int argc, SXI* argv) {
-    return as<Pair>(list_tail(argc, argv))->first;
+    return car(list_tail(argc, argv));
 }
 
 static const function_1_def def1s[] = {
     { "pair?", [](SXI x) { return wrap_bool(instance<Pair>(x)); }},
-    { "car", [](SXI x) { return as<Pair>(x)->first; }},
-    { "cdr", [](SXI x) { return as<Pair>(x)->second; }},
+    { "car", car },
+    { "cdr", cdr },
     { "null?", [](SXI x) { return wrap_bool(x == c_null); }},
     { "list?", list_p },
     { "length", list_length },

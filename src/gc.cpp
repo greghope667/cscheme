@@ -4,6 +4,7 @@
 #include "sxi.hpp"
 #include "env.hpp"
 #include "vector.hpp"
+#include "string.hpp"
 #include <assert.h>
 
 using namespace sxi;
@@ -37,6 +38,7 @@ static void* alloc_block() {
     X(Pair) \
     X(Thunk) \
     X(Vector) \
+    X(String) \
 
 #define GC_TYPES \
     GC_TAG_TYPES \
@@ -269,6 +271,11 @@ void deallocate(Formals* f) {
     f->names.dealloc();
 }
 
+template <>
+void deallocate(String* s) {
+    s->dealloc();
+}
+
 /// GC module API
 
 static vector<SXI> gc_protected = {};
@@ -302,4 +309,24 @@ sxi::Environment* sxi::make_environment(Environment* parent) {
     auto env = gc_alloc<Environment>();
     *env = { .parent = parent, .table = {} };
     return env;
+}
+
+String* sxi::make_string() {
+    auto str = gc_alloc<String>();
+    *str = {};
+    return str;
+}
+
+String* sxi::make_string(const char* data, int len) {
+    auto str = gc_alloc<String>();
+    *str = {};
+    str->_storage.reserve(len+1);
+    str->_storage.length = len+1;
+    memcpy(str->_storage.data, data, len);
+    str->_storage[len] = 0;
+    return str;
+}
+
+String* sxi::make_string(const char* data) {
+    return make_string(data, strlen(data));
 }

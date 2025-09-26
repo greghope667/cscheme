@@ -125,13 +125,31 @@ OP(op_tailcall): {
         match(function) {
             case_val(Function_n, f) {
                 tos = f(args.length, args.data);
-                goto* &&OP(op_ret);
+                goto OP(op_ret);
             }
             case_val(Function_1, f) {
                 if (args.length != 1)
                     invalid_arguments(function, args);
                 tos = f(args[0]);
-                goto* &&OP(op_ret);
+                goto OP(op_ret);
+            }
+            case_val(Function_s, f) {
+                switch (f) {
+                    case SXI_FUNC_apply: {
+                        if (args.length < 2)
+                            invalid_arguments(function, args);
+                        auto tail = stack->data[stack->length-1];
+                        memmove(stack->data, stack->data+1, (stack->length-2)*sizeof(SXI));
+                        stack->length -= 2;
+                        while (tail != c_null) {
+                            stack->push(car(tail));
+                            tail = cdr(tail);
+                        }
+                        goto OP(op_tailcall);
+                    }
+                    default:
+                        SXI_UNREACHABLE;
+                }
             }
             case_lambda(l) {
                 env = bind_lambda(l, args);

@@ -46,11 +46,30 @@ void test_print_improper_list() {
     print_and_compare(wrap(&c), "(1 2 . 3)");
 }
 
+static void test_print_chars() {
+    struct { const char* out; sxi::character ch; } cases[] = {
+        { "#\\a",         'a' },
+        { "#\\A",         'A' },
+        { "#\\(",         '(' },
+        { "#\\alarm",      7  },
+        { "#\\backspace",  8  },
+        { "#\\delete",   0x7f },
+        { "#\\escape",   '\e' },
+        { "#\\newline",  '\n' },
+        { "#\\null",     '\0' },
+        { "#\\return",   '\r' },
+        { "#\\space",     ' ' },
+        { "#\\tab",      '\t' },
+    };
+    for (auto [out, ch] : cases) print_and_compare(wrap(ch), out);
+}
+
 TEST_LIST = {
     { "test_memstream", test_memstream },
     { "test_print_int", test_print_int },
     { "test_print_constants", test_print_constants },
     { "test_print_list", test_print_list },
     { "test_print_improper_list", test_print_improper_list },
+    { "test_print_chars", test_print_chars },
     { NULL, NULL },
 };

@@ -1,6 +1,7 @@
 #include "code.hpp"
 #include "sxi.hpp"
 #include "match.hpp"
+#include "string.hpp"
 
 #include <stdio.h>
 
@@ -17,6 +18,8 @@ const char* sxi::get_tag_name(sxi_tag tag) {
     case SXI_TAG_function_s:return "function";
     case SXI_TAG_function_1:return "function";
     case SXI_TAG_lambda:    return "lambda";
+    case SXI_TAG_char:      return "character";
+    case SXI_TAG_string:    return "string";
     default:                break;
     }
     static char tagname[32];
@@ -71,6 +74,46 @@ static void print_formals(FILE* f, Formals* formals) {
     fprintf(f, ")");
 }
 
+static void print_character(FILE* f, character ch) {
+    if (' ' < ch && ch < 0x7f) {
+        fprintf(f, "#\\%c", ch);
+        return;
+    }
+
+    if (ch <= ' ' || ch == 0x7f) {
+        for (auto [name, chr] : character_names) {
+            if (ch == chr) {
+                fprintf(f, "#\\%s", name);
+                return;
+            }
+        }
+    }
+
+    fprintf(f, "#\\x%x", ch);
+}
+
+static void print_string_character(FILE* f, sxi::character ch) {
+    if (' ' <= ch && ch < 0x7f) {
+        fputc(ch, f);
+        return;
+    }
+    if (ch < ' ') {
+        for (auto [escape, chr] : string_escapes) {
+            if (ch == chr) {
+                fprintf(f, "\\%c", escape);
+                return;
+            }
+        }
+    }
+    fprintf(f, "\\x%x", ch);
+}
+
+static void print_string(FILE* f, String* str) {
+    fputc('"', f);
+    for (auto ch : *str) print_string_character(f, ch);
+    fputc('"', f);
+}
+
 void sxi::print(FILE* f, SXI value) {
     match(value) {
         case_int(i) {
@@ -93,6 +136,14 @@ void sxi::print(FILE* f, SXI value) {
             fprintf(f, "#<lambda %p ", lambda);
             print_formals(f, lambda->arguments);
             fputc('>', f);
+            break;
+        }
+        case_val(sxi::character, ch) {
+            print_character(f, ch);
+            break;
+        }
+        case_ptr(String, str) {
+            print_string(f, str);
             break;
         }
         default:
@@ -127,7 +178,7 @@ const char* sxi::get_opcode_name(opcode op) {
 static void disassemble_code(FILE* f, Code* code) {
     auto len = code->insns_len;
     fprintf(
-        f, "CODE %p: (len %i sym %i lit %i lambda %i)\n", 
+        f, "CODE %p: (len %i sym %i lit %i lambda %i)\n",
         code, len, code->symbols_len, code->literals_len, code->lambdas_len
     );
     int ip = 0;
@@ -141,7 +192,7 @@ static void disassemble_code(FILE* f, Code* code) {
                 print(f, code->literals[insns[ip+1]]);
                 ip += 2;
                 break;
-            
+
             case op_lambda: {
                 auto lambda = code->lambdas[insns[ip+1]];
                 fprintf(f, "#<protolambda %p ", lambda.code);
@@ -150,7 +201,7 @@ static void disassemble_code(FILE* f, Code* code) {
                 ip += 2;
                 break;
             }
-            
+
             case op_set:
             case op_define:
             case op_lookup: {
@@ -190,7 +241,7 @@ static void disassemble_code(FILE* f, Code* code) {
     }
 }
 
-void sxi::disassemble(FILE* f, const Thunk* t) { 
+void sxi::disassemble(FILE* f, const Thunk* t) {
     disassemble_code(f, t->code);
 }
 

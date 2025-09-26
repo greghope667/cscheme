@@ -10,12 +10,15 @@ enum sxi_tag : char {
     SXI_TAG_const = 0,
     SXI_TAG_int,
     SXI_TAG_sym,
+    SXI_TAG_char,
 
     SXI_TAG_pair,
     SXI_TAG_env,
     SXI_TAG_vector,
     // SXI_TAG_struct_type,
     // SXI_TAG_struct_instance,
+
+    SXI_TAG_string,
 
     SXI_TAG_function_n,
     SXI_TAG_function_1,
@@ -49,6 +52,8 @@ typedef struct SXI {
 inline bool operator==(SXI l, SXI r) {
     return l._pad == r._pad && l._integer == r._integer;
 }
+
+bool equal(SXI l, SXI r);
 
 // Error handling (c++)
 [[noreturn]] void error(const char* msg);
@@ -166,6 +171,11 @@ constexpr inline bool is_truthy(SXI sxi) {
 typedef intptr_t sxi_int;
 template <> struct tt::traits<sxi_int> : tt::tagged<SXI_TAG_int>, tt::unboxed {};
 
+/// Characters (Unicode? Who uses that?) ///
+
+typedef unsigned char character;
+template <> struct tt::traits<character> : tt::tagged<SXI_TAG_char>, tt::unboxed {};
+
 /// Pairs ///
 // Cons pairs - the fundamental data structure.
 // These MUST be heap allocated (like all compound data types here)
@@ -197,6 +207,9 @@ static inline SXI list(const SXI (&ls)[N]) {
     return head;
 }
 
+inline SXI car(SXI p) { return as<Pair>(p)->first; }
+inline SXI cdr(SXI p) { return as<Pair>(p)->second; }
+
 /// Symbols (interned) ///
 
 struct Symbol;
@@ -209,6 +222,16 @@ Symbol* make_symbol(const char* str);
 const char* symbol_name(const Symbol* sym);
 size_t symbol_table_size();
 Symbol* gensym();
+
+/// Strings ///
+
+struct String;
+template <> struct tt::traits<String> : tt::tagged<SXI_TAG_string>, tt::boxed {};
+
+String* make_string();
+String* make_string(const char* str);
+String* make_string(const char* str, int len);
+char* string_data(String*, int* len = nullptr);
 
 /// Environments ///
 

@@ -3,3 +3,4 @@
 -std=gnu++23
 -Iinclude
 -Wno-c99-designator
+-Wno-c23-extensions
