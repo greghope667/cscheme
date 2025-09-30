@@ -49,7 +49,7 @@ typedef struct SXI {
 // (unboxed types). Meets (and exceeds) the requirements for
 // schemes 'eq?' procedure
 
-inline bool operator==(SXI l, SXI r) {
+static constexpr inline bool operator==(SXI l, SXI r) {
     return l._pad == r._pad && l._integer == r._integer;
 }
 
@@ -82,30 +82,28 @@ template <typename T> constexpr sxi_tag tag = traits<T>::tag;
 }
 
 template <tt::Unboxed T>
-constexpr inline SXI
+static constexpr inline SXI
 wrap(T t) {
     return { ._pad = tt::tag<T>, ._integer=static_cast<intptr_t>(t) };
 }
 
 template <tt::Boxed T>
-constexpr inline SXI
+static constexpr inline SXI
 wrap(T* t) {
     return { ._pad = tt::tag<T>, ._pointer=static_cast<void*>(t) };
 }
 
 template <tt::Fptr T>
-constexpr inline SXI
+static constexpr inline SXI
 wrap(T t) {
     return { ._pad = tt::tag<T>, ._pointer=reinterpret_cast<void*>(t) };
 }
 
-constexpr inline SXI
+static constexpr inline SXI
 wrap(SXI v) { return v; }
 
-// inline SXI wrap(SXI s) { return s; }
-
 template <tt::Unboxed T>
-constexpr inline T
+static constexpr inline T
 as(SXI s) {
     if (s._tag != tt::tag<T>)
         type_error(tt::tag<T>, s);
@@ -113,7 +111,7 @@ as(SXI s) {
 }
 
 template <tt::Boxed T>
-constexpr inline T*
+static constexpr inline T*
 as(SXI s) {
     if (s._tag != tt::tag<T>)
         type_error(tt::tag<T>, s);
@@ -121,7 +119,7 @@ as(SXI s) {
 }
 
 template <tt::Fptr T>
-constexpr inline T
+static constexpr inline T
 as(SXI s) {
     if (s._tag != tt::tag<T>)
         type_error(tt::tag<T>, s);
@@ -129,7 +127,7 @@ as(SXI s) {
 }
 
 template <typename T>
-constexpr inline bool
+static constexpr inline bool
 instance(SXI s) {
     return s._tag == tt::tag<T>;
 }
@@ -157,11 +155,11 @@ constexpr SXI c_void  = wrap(SXI_CONST_void);
 // they're bundled with the other constants. There's no wrap()/as()
 // methods, instead here's some accessors
 
-constexpr inline SXI wrap_bool(bool b) {
+static constexpr inline SXI wrap_bool(bool b) {
     return b ? c_true : c_false;
 }
 
-constexpr inline bool is_truthy(SXI sxi) {
+static constexpr inline bool is_truthy(SXI sxi) {
     return sxi != c_false;
 }
 
@@ -189,13 +187,13 @@ template <> struct tt::traits<Pair> : tt::tagged<SXI_TAG_pair>, tt::boxed {};
 
 Pair* alloc_pair();
 
-inline Pair* make_pair(SXI first, SXI second) {
+static inline Pair* make_pair(SXI first, SXI second) {
     auto p = alloc_pair();
     *p = { .first = first, .second = second };
     return p;
 }
 
-inline SXI cons(SXI first, SXI second) {
+static inline SXI cons(SXI first, SXI second) {
     return wrap(make_pair(first, second));
 }
 
@@ -207,8 +205,8 @@ static inline SXI list(const SXI (&ls)[N]) {
     return head;
 }
 
-inline SXI car(SXI p) { return as<Pair>(p)->first; }
-inline SXI cdr(SXI p) { return as<Pair>(p)->second; }
+static inline SXI car(SXI p) { return as<Pair>(p)->first; }
+static inline SXI cdr(SXI p) { return as<Pair>(p)->second; }
 
 /// Symbols (interned) ///
 
@@ -277,6 +275,10 @@ SXI read(FILE*);
 /// Eval ///
 
 SXI eval(SXI expr, Environment* env);
+static inline SXI quote(SXI value) {
+    static auto quote_sym = wrap(make_symbol("quote"));
+    return cons(quote_sym, cons(value, c_null));
+}
 
 /// Print ///
 

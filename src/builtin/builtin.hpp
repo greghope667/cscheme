@@ -30,4 +30,5 @@ struct builtin_lib {
 
 namespace sxi {
 extern const builtin_lib builtin_lib_list;
+extern const builtin_lib builtin_lib_bool;
 }

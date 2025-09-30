@@ -66,6 +66,87 @@ struct vector {
     // static constexpr vector empty() { return vector{}; }
 };
 
+struct string {
+    union {
+        struct {
+            char* data_;
+            int capacity_;
+            int length_;
+        };
+        struct {
+            char buffer_[12];
+            int length2_; // same as length above (but sort of UB)
+        };
+    };
+
+    char* data() { return (length_ < 12) ? buffer_ : data_; }
+    int length() { return length_; }
+
+    auto begin(this auto&& self) { return self.data(); }
+    auto end(this auto&& self) { return self.data() + self.length(); }
+
+    void push(char c) {
+        if (length_ < 11) {
+            buffer_[length_++] = c;
+        } else if (length_ == 11) {
+            char* ptr = alloc<char>(16);
+            memcpy(ptr, buffer_, 12);
+            ptr[11] = c;
+            ptr[12] = 0;
+            data_ = ptr;
+            capacity_ = 16;
+            length_ = 12;
+        } else if (length_ + 1 < capacity_) {
+            data_[length_++] = c;
+            data_[length_] = 0;
+        } else {
+            data_ = realloc_x2(data_, capacity_);
+            data_[length_++] = c;
+            data_[length_] = 0;
+        }
+    }
+
+    void dealloc() {
+        if (length_ >= 12)
+            free(data_, capacity_);
+        *this = {};
+    }
+
+    void append(const char* data, int length) {
+        if (length < 0)
+            error_f("string length must be positive");
+        auto new_length = length_ + length;
+        if (new_length < 11) {
+            memcpy(buffer_ + length_, data, length);
+            buffer_[new_length] = 0;
+            length_ = new_length;
+        } else if (length_ < 11) {
+            auto ptr = alloc<char>(new_length + 1);
+            memcpy(ptr, buffer_, length_);
+            memcpy(ptr + length_, data, length);
+            ptr[new_length] = 0;
+            data_ = ptr;
+            length_ = new_length;
+            capacity_ = new_length + 1;
+        } else if (new_length + 1 < capacity_) {
+            memcpy(data_ + length_, data, length);
+            data_[new_length] = 0;
+            length_ = new_length;
+        } else {
+            auto new_cap = capacity_ + (length_ > length ? length_ : length);
+            data_ = realloc(data_, capacity_, new_cap);
+            memcpy(data_ + length_, data, length);
+            data_[new_length] = 0;
+            length_ = new_length;
+            capacity_ = new_cap;
+        }
+    }
+
+    char& operator[](int i) { bounds_check(i, length_); return data()[i]; }
+    sxi::span<char> span() { return { data(), length_ }; }
+};
+static_assert(sizeof(string) == 16);
+
 template<typename K, typename V, auto hash_fn>
 struct insert_only_map {
     struct Entry { K key; V value; };

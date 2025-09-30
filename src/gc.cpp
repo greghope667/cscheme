@@ -318,12 +318,11 @@ String* sxi::make_string() {
 }
 
 String* sxi::make_string(const char* data, int len) {
+    if (len < 0)
+        error_f("negative string length not allowed: %i", len);
     auto str = gc_alloc<String>();
     *str = {};
-    str->_storage.reserve(len+1);
-    str->_storage.length = len+1;
-    memcpy(str->_storage.data, data, len);
-    str->_storage[len] = 0;
+    str->append(data, len);
     return str;
 }
 

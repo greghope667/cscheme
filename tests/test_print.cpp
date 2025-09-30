@@ -64,6 +64,16 @@ static void test_print_chars() {
     for (auto [out, ch] : cases) print_and_compare(wrap(ch), out);
 }
 
+static void test_print_string() {
+    struct { const char* in; const char* print; } cases[] = {
+        { "", "\"\"" },
+        { "small", "\"small\"" },
+        { "this is a long string", "\"this is a long string\"" },
+    };
+    for (auto [in, out] : cases)
+        print_and_compare(wrap(sxi::make_string(in)), out);
+}
+
 TEST_LIST = {
     { "test_memstream", test_memstream },
     { "test_print_int", test_print_int },
@@ -71,5 +81,6 @@ TEST_LIST = {
     { "test_print_list", test_print_list },
     { "test_print_improper_list", test_print_improper_list },
     { "test_print_chars", test_print_chars },
+    { "test_print_string", test_print_string },
     { NULL, NULL },
 };

@@ -9,7 +9,7 @@ enum token_tag {
     eof,
     lparen,
     rparen,
-    quote,
+    t_quote,
     boolean,
     dot,
     integer,
@@ -18,8 +18,8 @@ enum token_tag {
     // unquote,
     // unquote_splicing,
     lambda,
-    tcharacter,
-    string,
+    t_character,
+    t_string,
 };
 
 struct token {
@@ -101,7 +101,7 @@ static token read_hash(reader r) {
         case EOF:   sxi::error_f("read error: unexpected eof");
         case 't':   return { .tag = boolean, .data = true };
         case 'f':   return { .tag = boolean, .data = false };
-        case '\\':  return { .tag = tcharacter, .data = read_character(r) };
+        case '\\':  return { .tag = t_character, .data = read_character(r) };
         default:    sxi::error_f("read error: illegal escape: '#%c'", ch);
     }
 }
@@ -128,7 +128,7 @@ static token read_string(reader r) {
             case EOF:
                 sxi::error("read error: unexpected eof");
             case '"':
-                return { .tag = string, .data = (intptr_t)str };
+                return { .tag = t_string, .data = (intptr_t)str };
             case '\\':
                 read_string_escape(r, str);
                 break;
@@ -144,14 +144,14 @@ static token read_token(reader r) {
     switch (ch) {
         case EOF:
             return { .tag = eof, .data=0 };
-        case '(':
+        case '(': case '[':
             return { .tag = lparen, .data=0 };
-        case ')':
+        case ')': case ']':
             return { .tag = rparen, .data=0 };
         case '#':
             return read_hash(r);
         case '\'':
-            return { .tag = quote, .data=0 };
+            return { .tag = t_quote, .data=0 };
         case ' ': case '\n': case '\t': case '\r':
             goto skip_space;
         case ';':
@@ -199,10 +199,10 @@ static SXI read_value(reader r, token first) {
         case lparen:        return read_list(r);
         case integer:       return wrap<sxi_int>(first.data);
         case ident:         return wrap((Symbol*)first.data);
-        case quote:         return read_quote_form(r, symbol_quote);
+        case t_quote:       return read_quote_form(r, symbol_quote);
         case lambda:        return wrap(symbol_lambda);
-        case tcharacter:    return wrap(sxi::character(first.data));
-        case string:        return wrap((sxi::String*)first.data);
+        case t_character:   return wrap(sxi::character(first.data));
+        case t_string:      return wrap((sxi::String*)first.data);
 
         case rparen: case dot:
             error("read error: unexpected token");
