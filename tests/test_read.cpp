@@ -82,6 +82,13 @@ static void test_read_chars() {
     TEST_EXCEPTION(sxi::read(InStream("#\\").f);, sxi::Error);
 }
 
+static void test_read_number_base() {
+    read_compare("#b101", wrap(0b101z));
+    read_compare("#o101", wrap(0101z));
+    read_compare("#d101", wrap(101z));
+    read_compare("#x101", wrap(0x101z));
+}
+
 TEST_LIST = {
     { "test_read_int", test_read_int },
     { "test_read_constants", test_read_constants },
@@ -90,5 +97,6 @@ TEST_LIST = {
     { "test_read_quote", test_read_quote },
     { "test_read_comment", test_read_comment },
     { "test_read_chars", test_read_chars },
+    { "test_read_number_base", test_read_number_base },
     { NULL, NULL },
 };

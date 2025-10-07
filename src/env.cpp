@@ -41,7 +41,8 @@ Environment* sxi::make_environment_rootlet() {
 }
 
 Environment* sxi::interaction_environment() {
-    return make_environment(make_environment_rootlet());
+    static auto env = run_init_scm_code();
+    return make_environment(env);
 }
 
 SXI sxi::eval(SXI expr, Environment* env) {

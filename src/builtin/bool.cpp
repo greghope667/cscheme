@@ -47,6 +47,7 @@ static const function_1_def def1s[] = {
     { "boolean", boolean },
     { "boolean?", boolp },
     { "not", not_ },
+    { "void?", [](SXI s) { return wrap_bool(s == c_void); } },
 };
 
 static const function_n_def defns[] = {

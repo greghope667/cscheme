@@ -108,9 +108,9 @@ static void compile_set     (Builder*, bool is_tail, int begin, int end);
 static void compile_quote   (Builder*, bool is_tail, int begin, int end);
 static void compile_lambda  (Builder*, bool is_tail, int begin, int end);
 
-struct special_form { 
-    Symbol* name; 
-    void (*compile)(Builder*, bool is_tail, int begin, int end); 
+struct special_form {
+    Symbol* name;
+    void (*compile)(Builder*, bool is_tail, int begin, int end);
 };
 static special_form special_forms[] = {
     { make_symbol("if"),     compile_if     },
@@ -156,7 +156,7 @@ static Formals* parse_formals(SXI arg_list) {
     for (;;) {
         match(arg_list) {
             case_pair2(head, rest) {
-                if (not instance<Symbol>(head)) 
+                if (not instance<Symbol>(head))
                     error("compile syntax error: invalid formals");
                 formals->names.push(as<Symbol>(head));
                 arg_list = rest;
@@ -272,16 +272,26 @@ static void compile_begin(Builder* code, bool is_tail, int begin, int end) {
 }
 
 static void compile_define(Builder* code, bool is_tail, int begin, int end) {
-    // (define identifier expr)
-    if (end - begin != 3)
+    SXI identifier;
+
+    if (end - begin >= 2 && instance<Pair>(compile_stack[begin+1])) {
+        // (define (identifier <formals>) . body)
+        auto p = as<Pair>(compile_stack[begin+1]);
+        identifier = p->first;
+        compile_stack[begin+1] = p->second;
+        compile_lambda(code, false, begin, end);
+    } else if (end - begin == 3) {
+        // (define identifier expr)
+        identifier = compile_stack[begin+1];
+        compile_expr(code, false, end, compile_stack[begin+2]);
+    } else {
         error("compile syntax error: bad define form");
+    }
 
-    compile_expr(code, false, end, compile_stack[begin+2]);
-
-    if (not instance<Symbol>(compile_stack[begin+1]))
+    if (not instance<Symbol>(identifier))
         error("compile syntax error: define identifier not a symbol");
 
-    code->appends(op_define, as<Symbol>(compile_stack[begin+1]));
+    code->appends(op_define, as<Symbol>(identifier));
 
     if (is_tail) code->append(op_ret);
 }

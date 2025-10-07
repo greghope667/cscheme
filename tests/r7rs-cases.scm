@@ -121,3 +121,84 @@
   ((boolean=? #t #t #t) ==> #t)
   ((boolean=? #f #f) ==> #t)
   ((boolean=? #t #f) ==> #f))
+
+(section "6.4 Pairs and lists")
+
+(cases
+  ((pair? '(a . b)) ==> #t)
+  ((pair? '(a b c)) ==> #t)
+  ((pair? '()) ==> #f))
+  ;((pair? '#(a b) ==> #f)))
+
+(cases
+  ((cons 'a '()) ==> (a))
+  ((cons '(a) '(b c d)) ==> ((a) b c d))
+  ((cons "a" '(b c)) ==> ("a" b c))
+  ((cons 'a 3) ==> (a . 3))
+  ((cons '(a b) 'c) ==> ((a b) . c)))
+
+(cases
+  ((car '(a b c)) ==> a)
+  ((car '((a) b c d)) ==> (a))
+  ((cdr '((a) b c d)) ==> (b c d))
+  ((car '(1 . 2)) ==> 1)
+  ((cdr '(1 . 2)) ==> 2))
+
+(case1
+  (begin
+    (define x (cons 1 2))
+    (set-car! x 3)
+    (set-cdr! x 4)
+    x)
+  ==> (3 . 4))
+
+(cases
+  ((car '(1 (2 3) 4 5)) ==> 1)
+  ((cadr '(1 (2 3) 4 5)) ==> (2 3))
+  ((caddr '(1 (2 3) 4 5)) ==> 4)
+  ((caadr '(1 (2 3) 4 5)) ==> 2)
+  ((cdadr '(1 (2 3) 4 5)) ==> (3))
+  ((cdddr '(1 (2 3) 4 5)) ==> (5)))
+
+(cases
+  ((null? '()) ==> #t)
+  ((null? '(1 2)) ==> #f)
+  ((list? '()) ==> #t)
+  ((list? '(1 2)) ==> #t))
+
+(skip
+  ; Circular lists not yet handled
+  (let ([x (list 'a)])
+    (set-cdr! x x)
+    (list? x))
+  ==> #f)
+
+(cases
+  ((make-list 2 3) ==> (3 3)))
+
+(cases
+  ((length '(a b c)) ==> 3)
+  ((length '(a (b) (c d e))) ==> 3)
+  ((length '()) ==> 0))
+
+(cases
+  ((append '(x) '(y)) ==> (x y))
+  ((append '(a) '(b c d)) ==> (a b c d))
+  ((append '(a (b)) '((c))) ==> (a (b) (c)))
+  ((append '(a b) '(c . d)) ==> (a b c . d))
+  ((append '() 'a) ==> a))
+
+(cases
+  ((reverse '(a b c)) ==> (c b a))
+  ((reverse '(a (b c) d (e (f)))) ==> ((e (f)) d (b c) a)))
+
+(cases
+  ((list-tail '() 0) ==> ())
+  ((list-tail '(a b c d e) 2) ==> (c d e)))
+
+(cases
+  ((list-ref '(a b c d) 2) ==> c)
+  ((begin
+    (define l (list 'a 'b 'e))
+    (list-set! l 2 'c)
+    l) ==> (a b c)))

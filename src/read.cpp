@@ -93,7 +93,18 @@ static sxi::character read_character(reader r) {
                 return ch;
     }
 
-    sxi::error_f("read error: unknown character escape sequence: \%s", buffer);
+    sxi::error_f("read error: unknown character escape sequence: \\%s", buffer);
+}
+
+static sxi::sxi_int read_number(reader r, int base) {
+    char buffer[sxi::MAX_SYMBOL_LENGTH];
+    auto len = read_identifier(r, r.getc(), buffer);
+    buffer[len] = 0;
+    char* end;
+    auto i = strtoll(buffer, &end, base);
+    if (end != &buffer[len])
+        sxi::error_f("read error: invalid number %s for base %i", buffer, base);
+    return i;
 }
 
 static token read_hash(reader r) {
@@ -102,6 +113,10 @@ static token read_hash(reader r) {
         case 't':   return { .tag = boolean, .data = true };
         case 'f':   return { .tag = boolean, .data = false };
         case '\\':  return { .tag = t_character, .data = read_character(r) };
+        case 'b':   return { .tag = integer, .data = read_number(r, 2) };
+        case 'o':   return { .tag = integer, .data = read_number(r, 8) };
+        case 'd':   return { .tag = integer, .data = read_number(r, 10) };
+        case 'x':   return { .tag = integer, .data = read_number(r, 16) };
         default:    sxi::error_f("read error: illegal escape: '#%c'", ch);
     }
 }
