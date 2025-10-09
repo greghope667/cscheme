@@ -66,7 +66,7 @@ template <> struct tt::traits<Function_s> : tt::tagged<SXI_TAG_function_s>, tt::
 
 struct Continuation {
     Code* code;
-    int ip;
+    opcode* ip;
     Continuation* next;
     Environment* env;
     Vector* stack;

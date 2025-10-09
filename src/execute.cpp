@@ -37,14 +37,14 @@ bind_lambda(Lambda* l, span<SXI> args) {
 }
 
 #define OP(op) _label_ ## op
-#define NEXT goto* jump_table[code->insns[ip]]
+#define NEXT goto* jump_table[*ip]
 #define J(op) [op] = &&OP(op)
 #define UNIMPLEMENTED(op) [op] = &&OP(unimplemented)
 
 static __attribute__((noinline))
 SXI execute_(Code* code, Continuation* cont, Environment* env) {
     SXI tos = c_void;
-    int ip = 0;
+    opcode* ip = code->insns;
     Vector* stack = nullptr;
 
     static constexpr void* jump_table[] = {
@@ -67,28 +67,29 @@ SXI execute_(Code* code, Continuation* cont, Environment* env) {
     NEXT;
 
 OP(op_literal):
-    tos = code->literals[code->insns[ip+1]];
+    tos = code->literals[ip[1]];
     ip += 2;
     NEXT;
 
 OP(op_lookup):
-    tos = env->lookup(code->symbols[code->insns[ip+1]]);
+    tos = env->lookup(code->symbols[ip[1]]);
     ip += 2;
     NEXT;
 
 OP(op_define):
-    env->define(code->symbols[code->insns[ip+1]], tos);
+    env->define(code->symbols[ip[1]], tos);
     ip += 2;
     NEXT;
 
 OP(op_set):
-    env->set(code->symbols[code->insns[ip+1]], tos);
+    env->set(code->symbols[ip[1]], tos);
     ip += 2;
     NEXT;
 
 OP(op_push):
     assert(stack->length < stack->capacity);
-    stack->push(tos);
+    stack->data[stack->length++] = tos;
+    // stack->push(tos);
     ip += 1;
     NEXT;
 
@@ -96,7 +97,7 @@ OP(op_alloc_cont): {
         auto new_cont = gc_alloc<Continuation>();
         *new_cont = {
             .code = code,
-            .ip = INT_MAX,
+            .ip = nullptr,
             .next = cont,
             .env = env,
             .stack = stack,
@@ -110,13 +111,13 @@ OP(op_alloc_cont): {
 OP(op_alloc_stack):
     stack = gc_alloc<Vector>();
     *stack = {};
-    stack->reserve(code->insns[ip+1]);
+    stack->reserve(ip[1]);
     ip += 2;
     NEXT;
 
 OP(op_call):
     cont->ip = ip + 1;
-    goto* &&OP(op_tailcall);
+    goto OP(op_tailcall);
 
 OP(op_tailcall): {
         assert(stack->length > 0);
@@ -154,7 +155,7 @@ OP(op_tailcall): {
             case_lambda(l) {
                 env = bind_lambda(l, args);
                 code = l->code;
-                ip = 0;
+                ip = code->insns;
                 NEXT;
             }
             default:
@@ -177,15 +178,15 @@ OP(op_exit):
     return tos;
 
 OP(op_branch):
-    ip += code->insns[ip+1];
+    ip += ip[1];
     NEXT;
 
 OP(op_branch0):
-    ip += is_truthy(tos) ? 2 : code->insns[ip+1];
+    ip += is_truthy(tos) ? 2 : ip[1];
     NEXT;
 
 OP(op_lambda): {
-        auto pl = code->lambdas[code->insns[ip+1]];
+        auto pl = code->lambdas[ip[1]];
         auto lambda = gc_alloc<Lambda>();
         *lambda = { pl.code, pl.arguments, env };
         tos = wrap(lambda);
@@ -194,7 +195,7 @@ OP(op_lambda): {
     }
 
 [[maybe_unused]] OP(unimplemented):
-    error_f("execute error: opcode '%s' not implemented", get_opcode_name(code->insns[ip]));
+    error_f("execute error: opcode '%s' not implemented", get_opcode_name(ip[0]));
 }
 
 SXI sxi::execute(Thunk* t) {
@@ -208,6 +209,7 @@ SXI sxi::execute(Thunk* t) {
 
     auto exit_cont = gc_alloc<Continuation>();
     *exit_cont = {};
+    exit_cont->ip = exit_fn->insns;
     exit_cont->code = exit_fn;
 
     return execute_(t->code, exit_cont, t->env);
