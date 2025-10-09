@@ -6,3 +6,6 @@ src/scheme/
 
 **/a.out
 **/perf.data*
+**/callgrind.out*
+
+notes/

@@ -15,8 +15,8 @@ enum sxi_tag : char {
     SXI_TAG_pair,
     SXI_TAG_env,
     SXI_TAG_vector,
-    // SXI_TAG_struct_type,
-    // SXI_TAG_struct_instance,
+    SXI_TAG_struct_type,
+    SXI_TAG_struct_instance,
 
     SXI_TAG_string,
 

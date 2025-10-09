@@ -2,6 +2,7 @@
 
 #include "sxi.hpp"
 #include "../tl.hpp"
+#include "../error.hpp" // IWYU pragma: export
 
 struct function_1_def {
     const char* name;
@@ -31,6 +32,9 @@ struct builtin_lib {
 namespace sxi {
 extern const builtin_lib builtin_lib_list;
 extern const builtin_lib builtin_lib_bool;
+extern const builtin_lib builtin_lib_struct;
+extern const builtin_lib builtin_lib_number;
+extern const builtin_lib builtin_lib_misc;
 
 Environment* run_init_scm_code();
 }

@@ -38,32 +38,15 @@ struct options_s {
                 default:
                     exit(EXIT_FAILURE);
             }
-        } 
+        }
         return options;
     }
 };
-
-void add_defines(sxi::Environment* env) {
-    sxi::env_define(env, sxi::make_symbol("+"),
-        wrap(+[](int n, sxi::SXI* p) {
-            sxi::sxi_int total = 0;
-            for (int i=0; i<n; i++)
-                total += as<sxi::sxi_int>(p[i]);
-            return sxi::wrap(total);
-        })
-    );
-    sxi::env_define(env, sxi::make_symbol("~"),
-        wrap(+[](sxi::SXI v) {
-            return sxi::wrap(~as<sxi::sxi_int>(v));
-        })
-    );
-}
 
 int main(int argc, char** argv) {
     auto options = options_s::parse(argc, argv);
 
     auto env = sxi::interaction_environment();
-    add_defines(env);
     gc_protect(wrap(env));
 
     {

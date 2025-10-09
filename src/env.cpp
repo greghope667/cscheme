@@ -34,6 +34,9 @@ Environment* sxi::make_environment_rootlet() {
 
     add(builtin_lib_list);
     add(builtin_lib_bool);
+    add(builtin_lib_struct);
+    add(builtin_lib_number);
+    add(builtin_lib_misc);
 
     env->define(make_symbol("apply"), wrap(SXI_FUNC_apply));
 

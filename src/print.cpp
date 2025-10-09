@@ -2,6 +2,7 @@
 #include "sxi.hpp"
 #include "match.hpp"
 #include "string.hpp"
+#include "struct.hpp"
 
 #include <stdio.h>
 
@@ -20,6 +21,8 @@ const char* sxi::get_tag_name(sxi_tag tag) {
     case SXI_TAG_lambda:    return "lambda";
     case SXI_TAG_char:      return "character";
     case SXI_TAG_string:    return "string";
+    case SXI_TAG_struct_type:       return "struct type";
+    case SXI_TAG_struct_instance:   return "struct instance";
     default:                break;
     }
     static char tagname[32];
@@ -114,6 +117,23 @@ static void print_string(FILE* f, String* str) {
     fputc('"', f);
 }
 
+static void print_struct_type(FILE* f, StructType* st) {
+    fprintf(f, "#<struct type %p %s ( ", st, symbol_name(st->name));
+    for (auto name : st->field_names)
+        fprintf(f, "%s ", symbol_name(name));
+    fprintf(f, ")>");
+}
+
+static void print_struct(FILE* f, StructInstance* si) {
+    fprintf(f, "#<struct %p %s (", si, symbol_name(si->type->name));
+    for (int i=0; i<si->fields.length; i++) {
+        fprintf(f, " %s = ", symbol_name(si->type->field_names[i]));
+        print(f, si->fields[i]);
+        fputc(',', f);
+    }
+    fprintf(f, " )>");
+}
+
 void sxi::print(FILE* f, SXI value) {
     match(value) {
         case_int(i) {
@@ -144,6 +164,14 @@ void sxi::print(FILE* f, SXI value) {
         }
         case_ptr(String, str) {
             print_string(f, str);
+            break;
+        }
+        case_ptr(StructType, st) {
+            print_struct_type(f, st);
+            break;
+        }
+        case_ptr(StructInstance, si) {
+            print_struct(f, si);
             break;
         }
         default:

@@ -5,6 +5,7 @@
 #include "env.hpp"
 #include "vector.hpp"
 #include "string.hpp"
+#include "struct.hpp"
 #include <assert.h>
 
 using namespace sxi;
@@ -39,6 +40,8 @@ static void* alloc_block() {
     X(Thunk) \
     X(Vector) \
     X(String) \
+    X(StructType) \
+    X(StructInstance) \
 
 #define GC_TYPES \
     GC_TAG_TYPES \
@@ -243,6 +246,13 @@ void mark_children(Continuation* c) {
     mark(c->stack);
 }
 
+template <>
+void mark_children(StructInstance* si) {
+    mark(si->type);
+    for (auto field : si->fields)
+        mark(field);
+}
+
 /// Deallocation of memory from outside pool
 
 template <typename T>
@@ -274,6 +284,16 @@ void deallocate(Formals* f) {
 template <>
 void deallocate(String* s) {
     s->dealloc();
+}
+
+template <>
+void deallocate(StructType* st) {
+    st->field_names.dealloc();
+}
+
+template <>
+void deallocate(StructInstance* si) {
+    si->fields.dealloc();
 }
 
 /// GC module API
