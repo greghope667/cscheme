@@ -3,6 +3,9 @@
 (define (define-early-macro name transformer)
   (set! early-macros (cons (cons name transformer) early-macros)))
 
+(define (set-early-macro! name transformer)
+  (set-cdr! (assq name early-macros) transformer))
+
 (define (macroexpand expr env)
   (if (null? expr) ()
     (if (list? expr)
@@ -73,6 +76,29 @@
             (nested (car rest) (cdr rest))
             #f))))
     (if (null? body) #t
+      (list
+        (list 'lambda (list name)
+          (nested (car body) (cdr body)))
+        (begin)))))
+
+(set-early-macro! 'cond
+  (lambda (body)
+    (define name (gensym))
+    (define (nested clause rest)
+      (if (and (null? rest) (eq? (car clause) 'else))
+        (cons 'begin (cdr clause))
+        (list
+          'begin
+          (list 'set! name (car clause))
+          (list 'if name
+            (cond
+              [(eq? (cadr clause) '=>) (list (caddr clause) name)]
+              [(null? (cdr clause)) name]
+              [#t (cons 'begin (cdr clause))])
+            (if (null? rest)
+              (begin)
+              (nested (car rest) (cdr rest)))))))
+    (if (null? body) (begin)
       (list
         (list 'lambda (list name)
           (nested (car body) (cdr body)))
