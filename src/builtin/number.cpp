@@ -25,19 +25,32 @@ static SXI minus(int argc, SXI* argv) {
     return wrap(total);
 }
 
-static SXI less(int argc, SXI* argv) {
+template <typename Compare>
+static bool compare(int argc, SXI* argv, Compare comp) {
     if (argc == 2)
-        return wrap_bool(as<sxi_int>(argv[0]) < as<sxi_int>(argv[1]));
+        return comp(as<sxi_int>(argv[0]), as<sxi_int>(argv[1]));
     SXI_CHECK_ARITY(2, INT_MAX);
 
-    auto largest = as<sxi_int>(argv[0]);
+    auto current = as<sxi_int>(argv[0]);
     for (auto v : span(argv+1, argc-1)) {
         auto i = as<sxi_int>(v);
-        if (largest >= i)
-            return c_false;
-        largest = i;
+        if (not comp(current, i))
+            return false;
+        current = i;
     }
-    return c_true;
+    return true;
+}
+
+static SXI less(int argc, SXI* argv) {
+    return wrap_bool(compare(argc, argv, [](sxi_int a, sxi_int b) { return a < b; }));
+}
+
+static SXI greater(int argc, SXI* argv) {
+    return wrap_bool(compare(argc, argv, [](sxi_int a, sxi_int b) { return a > b; }));
+}
+
+static SXI equal(int argc, SXI* argv) {
+    return wrap_bool(compare(argc, argv, [](sxi_int a, sxi_int b) { return a == b; }));
 }
 
 static const function_1_def def1s[] = {
@@ -48,6 +61,8 @@ static const function_n_def defns[] = {
     { "+", plus },
     { "-", minus },
     { "<", less },
+    { ">", greater },
+    { "=", equal },
 };
 
 const builtin_lib sxi::builtin_lib_number(def1s, defns);

@@ -1,5 +1,6 @@
 #include "gc.hpp"
 #include "code.hpp"
+#include "error.hpp"
 #include "match.hpp"
 #include "sxi.hpp"
 #include "env.hpp"
@@ -37,7 +38,7 @@ static void* alloc_block() {
     X(Environment) \
     X(Lambda) \
     X(Pair) \
-    X(Thunk) \
+    X(Chunk) \
     X(Vector) \
     X(String) \
     X(StructType) \
@@ -223,7 +224,7 @@ void mark_children(Lambda* l) {
 }
 
 template <>
-void mark_children(Thunk* t) {
+void mark_children(Chunk* t) {
     mark(t->code);
     mark(t->env);
 }
@@ -302,6 +303,16 @@ static vector<SXI> gc_protected = {};
 
 void sxi::gc_protect(SXI value) {
     gc_protected.push(value);
+}
+
+void sxi::gc_unprotect(SXI value) {
+    for (auto& v : gc_protected) {
+        if (v == value) {
+            v = gc_protected.data[--gc_protected.length];
+            return;
+        }
+    }
+    error(value, "gc_unprotect() object was not protected");
 }
 
 void sxi::gc_run(Continuation* cont, SXI tos) {

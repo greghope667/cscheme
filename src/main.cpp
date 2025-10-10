@@ -6,34 +6,36 @@
 
 #include <sys/resource.h>
 
-static bool rep(FILE* f, sxi::Environment* env) {
+static bool rep(FILE* f, sxi::Environment* env, bool print) {
     SXI_TRY {
         auto r = sxi::read(f);
         if (r == sxi::c_eof)
             return false;
-        sxi::print(stdout, r);
-        putchar('\n');
-        auto c = sxi::compile(r, env);
-        sxi::disassemble(stdout, c);
-        auto e = sxi::execute(c);
-        sxi::print(stdout, e);
+        auto e = sxi::eval(r, env);
+        if (print && not (e == sxi::c_void)) {
+            sxi::print(stdout, e);
+            putchar('\n');
+        }
     } SXI_CATCH(e) {
-        printf("Exception: %s", e.what());
+        printf("Exception: %s\n", e.what());
     }
-    putchar('\n');
     return true;
 }
 
 struct options_s {
     const char* expr;
+    const char* script;
 
     static options_s parse(int argc, char** argv) {
         int opt;
         options_s options = {};
-        while ((opt = getopt(argc, argv, "c:")) != -1) {
+        while ((opt = getopt(argc, argv, "c:s:")) != -1) {
             switch (opt) {
                 case 'c':
                     options.expr = optarg;
+                    break;
+                case 's':
+                    options.script = optarg;
                     break;
                 default:
                     exit(EXIT_FAILURE);
@@ -59,9 +61,17 @@ int main(int argc, char** argv) {
 
     if (options.expr) {
         auto stream = fmemopen((void*)options.expr, strlen(options.expr), "r");
-        rep(stream, env);
+        rep(stream, env, true);
+        fclose(stream);
+    } else if (options.script) {
+        auto stream = fopen(options.script, "rb");
+        if (not stream) {
+            perror("Unable to open script file");
+            return EXIT_FAILURE;
+        }
+        while (rep(stream, env, false)) {};
         fclose(stream);
     } else {
-        do { printf("> "); } while (rep(stdin, env));
+        do { printf("> "); } while (rep(stdin, env, true));
     }
 };

@@ -13,13 +13,34 @@ static SXI newline(int argc, SXI* argv) {
     return c_void;
 }
 
+static SXI gensym(int argc, SXI* argv) {
+    SXI_CHECK_ARITY(0, 0);
+    return wrap(sxi::gensym());
+}
+
+static SXI compile(int argc, SXI* argv) {
+    SXI_CHECK_ARITY(2, 2);
+    return wrap(sxi::compile(argv[0], as<Environment>(argv[1])));
+}
+
+static SXI disassemble(SXI value) {
+    if (instance<Chunk>(value))
+        sxi::disassemble(stdout, as<Chunk>(value));
+    else
+        sxi::disassemble(stdout, as<Lambda>(value));
+    return c_void;
+}
+
 static const function_1_def def1s[] = {
     { "display", display },
     { "write", display },
+    { "disassemble", disassemble },
 };
 
 static const function_n_def defns[] = {
     { "newline", newline },
+    { "gensym", gensym },
+    { "compile", compile },
 };
 
 const builtin_lib sxi::builtin_lib_misc(def1s, defns);

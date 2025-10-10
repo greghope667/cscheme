@@ -23,6 +23,7 @@ const char* sxi::get_tag_name(sxi_tag tag) {
     case SXI_TAG_string:    return "string";
     case SXI_TAG_struct_type:       return "struct type";
     case SXI_TAG_struct_instance:   return "struct instance";
+    case SXI_TAG_chunk:     return "chunk";
     default:                break;
     }
     static char tagname[32];
@@ -269,7 +270,7 @@ static void disassemble_code(FILE* f, Code* code) {
     }
 }
 
-void sxi::disassemble(FILE* f, const Thunk* t) {
+void sxi::disassemble(FILE* f, const Chunk* t) {
     disassemble_code(f, t->code);
 }
 

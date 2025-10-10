@@ -15,8 +15,9 @@ struct Environment {
         auto hash = symbol_hash(name);
         auto [found, loc] = table.lookup(name, hash);
         if (found)
-            error_f("variable %s already defined", sxi::symbol_name(name));
-        table.append(name, value, loc);
+            table.items[loc].value = value;
+        else
+            table.append(name, value, loc);
     }
 
     void set(const Symbol* name, SXI value) {

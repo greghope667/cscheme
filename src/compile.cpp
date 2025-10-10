@@ -354,9 +354,9 @@ static Code* compile_to_code(SXI expr, int csp) {
     }
 }
 
-Thunk* sxi::compile(SXI expr, Environment* env) {
+Chunk* sxi::compile(SXI expr, Environment* env) {
     auto code = compile_to_code(expr, 0);
-    auto thunk = gc_alloc<Thunk>();
+    auto thunk = gc_alloc<Chunk>();
     *thunk = { .code = code, .env = env };
     return thunk;
 }

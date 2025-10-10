@@ -51,7 +51,7 @@ struct Lambda {
     Environment* capture;
 };
 
-struct Thunk {
+struct Chunk {
     Code* code;
     Environment* env;
 };

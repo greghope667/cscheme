@@ -39,6 +39,7 @@ Environment* sxi::make_environment_rootlet() {
     add(builtin_lib_misc);
 
     env->define(make_symbol("apply"), wrap(SXI_FUNC_apply));
+    env->define(make_symbol("current-env"), wrap(SXI_FUNC_current_env));
 
     return env;
 }

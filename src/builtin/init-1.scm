@@ -18,7 +18,7 @@
 
 (define (list-map1 f ls)
   (if (null? ls) ()
-    (cons (f (car ls)) (map1 f (cdr ls)))))
+    (cons (f (car ls)) (list-map1 f (cdr ls)))))
 
 (define (list-find-tail proc ls)
   (if (pair? ls)

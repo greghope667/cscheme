@@ -1,7 +1,3 @@
-(define (lookup-macro expr)
-  (match expr
-    '((? identifier id) . _) (lambda (id) ...)))
-
 (define (qq-expand-term t)
   (cond
     ((symbol? t) (list 'quote t))

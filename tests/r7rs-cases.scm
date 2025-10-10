@@ -46,6 +46,50 @@
   ('#t ==> #t)
   (#t ==> #t))
 
+(cases
+  (((lambda (x) (+ x x)) 4) ==> 8)
+  ((begin
+    (define reverse-subtract (lambda (x y) (- y x)))
+    (reverse-subtract 7 10))
+   ==> 3)
+  ((begin
+    (define add4  (let ([x 4]) (lambda (y) (+ x y))))
+    (add4 6))
+   ==> 10))
+
+(skip
+  (((lambda x x) 3 4 5 6) ==> (3 4 5 6))
+  (((lambda (x y . z) z)) ==> (5 6)))
+
+(cases
+  ((if (> 3 2) 'yes 'no) ==> yes)
+  ((if (> 2 3) 'yes 'no) ==> no)
+  ((if (> 3 2) (- 3 2) (+ 3 2)) ==> 1))
+
+(case1
+  (begin
+    (define x 2)
+    (set! x 4)
+    (+ x 1))
+  ==> 5)
+
+(section "4.2 Derived expression types")
+(section "4.2.1 Conditionals")
+
+(cases
+  ((cond
+    [(> 3 2) 'greater]
+    [(< 3 2) 'less])
+   ==> greater)
+  ((cond
+    [(> 3 3) 'greater]
+    [(< 3 3) 'less]
+    [else 'equal])
+   ==> equal)
+  ((cond
+    [(assv 'b '((a 1) (b 2))) => cadr]
+    [else #f])
+   ==> 2))
 
 (section "6.1 Equivalence predicates")
 
@@ -59,8 +103,8 @@
   ;((eqv? 0.0 +nan.0) ==> #f)
   ((eqv? (cons 1 2) (cons 1 2)) ==> #f)
   ((eqv? (lambda () 1) (lambda () 2)) ==> #f)
-  ;((let ([p (lambda (x) x)])
-  ;    (eqv? p p)) ==> #t)
+  ((let ([p (lambda (x) x)])
+     (eqv? p p)) ==> #t)
   ((eqv? #f 'nil) ==> #f))
 
 (cases
@@ -71,8 +115,8 @@
   ;((eqv? 1.0e0 1.0e0) ==>? boolean?)
   ;((eqv? +nan.0 +nan.0) ==>? boolean?))
 
-;(cases)
-  ;((let ([x '(a)]) (eqv? x x)) ==> #t))
+(cases
+  ((let ([x '(a)]) (eqv? x x)) ==> #t))
 
 (cases
   ((eq? 'a 'a) ==> #t)
@@ -83,9 +127,9 @@
   ((eq? '() '()) ==> #t)
   ((eq? 2 2) ==>? boolean?)
   ((eq? #\A #\A) ==>? boolean?)
-  ((eq? car car) ==> #t))
-  ;((let ([n (+ 2 3)]) (eq? n n)) ==>? boolean?)
-  ;((let ([x '(a)]) (eq? x x)) ==> #t))
+  ((eq? car car) ==> #t)
+  ((let ([n (+ 2 3)]) (eq? n n)) ==>? boolean?)
+  ((let ([x '(a)]) (eq? x x)) ==> #t))
 
 (cases
   ((equal? 'a 'a) ==> #t)

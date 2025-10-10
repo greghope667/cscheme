@@ -21,11 +21,10 @@ static bool run_test_case(sxi::String*, sxi::SXI case_expr, sxi::Environment* en
     auto type = sxi::car(sxi::cdr(case_expr));
     auto expected = sxi::cdr(sxi::cdr(case_expr));
 
-    auto eval_env = sxi::make_environment(env);
     auto result = sxi::c_false;
 
     SXI_TRY {
-        result = sxi::eval(sxi::list({list, expr}), eval_env);
+        result = sxi::eval(sxi::list({list, expr}), sxi::make_environment(env));
     } SXI_CATCH(e) {
         printf("Execution error in test: %s", e.what());
         printf("\nTest expression: ");
@@ -43,13 +42,13 @@ static bool run_test_case(sxi::String*, sxi::SXI case_expr, sxi::Environment* en
 
     if (type == eval_pred) {
         auto r = sxi::eval(
-            sxi::quote(sxi::list({
+            sxi::list({
                 apply,
                 sxi::car(expected),
-                result
-            })),
-            eval_env);
-        if (sxi::is_truthy(r)) return true;
+                sxi::quote(result)
+            }),
+            sxi::make_environment(env));
+        if (r == sxi::c_true) return true;
     }
 
     printf("Test case evaluated to bad result:\n");
@@ -84,6 +83,8 @@ bool run_file(FILE* f) {
                 break;
 
             auto [statement, body] = *sxi::as<sxi::Pair>(r);
+            sxi::gc_protect(r);
+
             if (statement == section) {
                 section_name = sxi::as<sxi::String>(sxi::car(body));
                 printf("Section %s\n", sxi::string_data(section_name));
@@ -99,6 +100,8 @@ bool run_file(FILE* f) {
             } else if (statement == skip) {
                 skip_count++;
             }
+
+            sxi::gc_unprotect(r);
         }
     } SXI_CATCH(e) {
         printf("Unexpected error while running tests (aborting)\n%s\n", e.what());

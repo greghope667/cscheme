@@ -11,3 +11,7 @@
     ; Boolean function
     ((boolean 1) ==> #t)
     ((boolean #f) ==> #f))
+
+(case1
+    ; Empty begin -> void
+    (begin) ==>? void?)

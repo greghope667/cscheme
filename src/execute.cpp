@@ -148,6 +148,12 @@ OP(op_tailcall): {
                         }
                         goto OP(op_tailcall);
                     }
+                    case SXI_FUNC_current_env: {
+                        if (args.length > 0)
+                            invalid_arguments(function, args);
+                        tos = wrap(env);
+                        goto OP(op_ret);
+                    }
                     default:
                         SXI_UNREACHABLE;
                 }
@@ -155,6 +161,14 @@ OP(op_tailcall): {
             case_lambda(l) {
                 env = bind_lambda(l, args);
                 code = l->code;
+                ip = code->insns;
+                NEXT;
+            }
+            case_ptr(Chunk, c) {
+                if (args.length != 0)
+                    invalid_arguments(function, args);
+                env = c->env;
+                code = c->code;
                 ip = code->insns;
                 NEXT;
             }
@@ -198,7 +212,7 @@ OP(op_lambda): {
     error_f("execute error: opcode '%s' not implemented", get_opcode_name(ip[0]));
 }
 
-SXI sxi::execute(Thunk* t) {
+SXI sxi::execute(Chunk* t) {
     auto exit_insns = alloc<opcode>(1);
     exit_insns[0] = op_exit;
 
