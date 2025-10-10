@@ -53,6 +53,21 @@ static SXI equal(int argc, SXI* argv) {
     return wrap_bool(compare(argc, argv, [](sxi_int a, sxi_int b) { return a == b; }));
 }
 
+struct divide_op_result { sxi_int a, b; };
+static divide_op_result divide_op(int argc, SXI* argv) {
+    SXI_CHECK_ARITY(2, 2);
+    auto a = as<sxi_int>(argv[0]);
+    auto b = as<sxi_int>(argv[1]);
+    if (b == 0)
+        error("divide by zero");
+    return { a, b };
+}
+
+static SXI remainder(int argc, SXI* argv) {
+    auto [num, div] = divide_op(argc, argv);
+    return wrap(num % div);
+}
+
 static const function_1_def def1s[] = {
     { "integer?", [](SXI s) { return wrap_bool(instance<sxi_int>(s)); } },
 };
@@ -63,6 +78,7 @@ static const function_n_def defns[] = {
     { "<", less },
     { ">", greater },
     { "=", equal },
+    { "remainder", remainder },
 };
 
 const builtin_lib sxi::builtin_lib_number(def1s, defns);
