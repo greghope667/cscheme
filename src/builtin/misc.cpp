@@ -24,10 +24,7 @@ static SXI compile(int argc, SXI* argv) {
 }
 
 static SXI disassemble(SXI value) {
-    if (instance<Chunk>(value))
-        sxi::disassemble(stdout, as<Chunk>(value));
-    else
-        sxi::disassemble(stdout, as<Lambda>(value));
+    sxi::disassemble(stdout, as<Lambda>(value));
     return c_void;
 }
 

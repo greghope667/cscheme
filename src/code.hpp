@@ -21,6 +21,7 @@ enum opcode : int16_t {
     op_define,
     op_set,
     op_lambda,
+    op_unlambda,
 };
 
 const char* get_opcode_name(opcode op);
@@ -49,11 +50,6 @@ struct Lambda {
     Code* code;
     Formals* arguments;
     Environment* capture;
-};
-
-struct Chunk {
-    Code* code;
-    Environment* env;
 };
 
 struct ProtoLambda {

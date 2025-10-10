@@ -23,7 +23,6 @@ const char* sxi::get_tag_name(sxi_tag tag) {
     case SXI_TAG_string:    return "string";
     case SXI_TAG_struct_type:       return "struct type";
     case SXI_TAG_struct_instance:   return "struct instance";
-    case SXI_TAG_chunk:     return "chunk";
     default:                break;
     }
     static char tagname[32];
@@ -197,6 +196,7 @@ const char* sxi::get_opcode_name(opcode op) {
         case op_define:         return "define";
         case op_set:            return "set";
         case op_lambda:         return "lambda";
+        case op_unlambda:       return "unlambda";
     }
     static char opname[32];
     snprintf(opname, 32, "<op %i>", op);
@@ -259,6 +259,7 @@ static void disassemble_code(FILE* f, Code* code) {
             case op_ret:
             case op_push:
             case op_exit:
+            case op_unlambda:
                 ip += 1;
                 break;
         }
@@ -268,10 +269,6 @@ static void disassemble_code(FILE* f, Code* code) {
     for (int i=0; i<code->lambdas_len; i++) {
         disassemble_code(f, code->lambdas[i].code);
     }
-}
-
-void sxi::disassemble(FILE* f, const Chunk* t) {
-    disassemble_code(f, t->code);
 }
 
 void sxi::disassemble(FILE* f, const Lambda* l) {

@@ -38,7 +38,6 @@ static void* alloc_block() {
     X(Environment) \
     X(Lambda) \
     X(Pair) \
-    X(Chunk) \
     X(Vector) \
     X(String) \
     X(StructType) \
@@ -221,12 +220,6 @@ void mark_children(Lambda* l) {
     mark(l->arguments);
     mark(l->capture);
     mark(l->code);
-}
-
-template <>
-void mark_children(Chunk* t) {
-    mark(t->code);
-    mark(t->env);
 }
 
 template <>

@@ -3,8 +3,8 @@
 #include "memstream.hpp"
 
 static void eval_and_compare(
-    const char* input, 
-    const char* expected, 
+    const char* input,
+    const char* expected,
     sxi::Environment* parent_env = nullptr
 ) {
     auto r = sxi::read(InStream{input}.f);

@@ -62,8 +62,14 @@ SXI execute_(Code* code, Continuation* cont, Environment* env) {
         J(op_define),
         J(op_set),
         J(op_lambda),
+        J(op_unlambda),
     };
 
+    NEXT;
+
+OP(op_unlambda):
+    env = env->parent;
+    ip += 1;
     NEXT;
 
 OP(op_literal):
@@ -164,14 +170,6 @@ OP(op_tailcall): {
                 ip = code->insns;
                 NEXT;
             }
-            case_ptr(Chunk, c) {
-                if (args.length != 0)
-                    invalid_arguments(function, args);
-                env = c->env;
-                code = c->code;
-                ip = code->insns;
-                NEXT;
-            }
             default:
                 error(function, "object is not callable");
         }
@@ -212,7 +210,7 @@ OP(op_lambda): {
     error_f("execute error: opcode '%s' not implemented", get_opcode_name(ip[0]));
 }
 
-SXI sxi::execute(Chunk* t) {
+static Continuation* make_exit_cont() {
     auto exit_insns = alloc<opcode>(1);
     exit_insns[0] = op_exit;
 
@@ -226,5 +224,9 @@ SXI sxi::execute(Chunk* t) {
     exit_cont->ip = exit_fn->insns;
     exit_cont->code = exit_fn;
 
-    return execute_(t->code, exit_cont, t->env);
+    return exit_cont;
+}
+
+SXI sxi::call(Lambda* l, int argc, SXI* argv) {
+    return execute_(l->code, make_exit_cont(), bind_lambda(l, span(argv, argc)));
 }

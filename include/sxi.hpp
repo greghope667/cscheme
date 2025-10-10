@@ -24,7 +24,6 @@ enum sxi_tag : char {
     SXI_TAG_function_1,
     SXI_TAG_function_s,
     SXI_TAG_lambda,
-    SXI_TAG_chunk,
 };
 
 // The core scheme data type used throughout the interpreter
@@ -244,20 +243,14 @@ void env_set(Environment*, const Symbol* name, SXI value);
 SXI env_lookup(const Environment*, const Symbol* name);
 bool env_try_lookup(const Environment*, const Symbol* name, SXI* value_out);
 
-/// Thunks (0-argument procedures) ///
-
-struct Chunk;
-template <> struct tt::traits<Chunk> : tt::tagged<SXI_TAG_chunk>, tt::boxed {};
-
-Chunk* compile(SXI expr, Environment* env);
-SXI execute(Chunk*);
-void disassemble(FILE*, const Chunk*);
-
 /// Lambdas ///
 
 struct Lambda;
 template <> struct tt::traits<Lambda> : tt::tagged<SXI_TAG_lambda>, tt::boxed {};
 
+SXI call(Lambda*, int argc, SXI* argv);
+static inline SXI execute(Lambda* l) { return call(l, 0, 0); }
+Lambda* compile(SXI expr, Environment* env);
 void disassemble(FILE*, const Lambda*);
 
 /// C-Functions ///

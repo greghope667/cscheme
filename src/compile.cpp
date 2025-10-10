@@ -90,11 +90,21 @@ struct Builder {
         lambdas.dealloc();
         literals.dealloc();
     }
+
+    template <typename CompileFn>
+    static Code* compile_to_code(CompileFn fn) {
+        Builder code{};
+        try {
+            fn(&code);
+            return code.finish();
+        } catch (...) {
+            code.dealloc();
+            throw;
+        }
+    }
 };
 
 /// Recursive compiler functions ///
-
-static Code* compile_to_code(SXI expr, int csp);
 
 static void compile_expr    (Builder*, bool is_tail, int csp, SXI expr);
 static void compile_list    (Builder*, bool is_tail, int csp, Pair* list);
@@ -326,16 +336,9 @@ static void compile_lambda(Builder* code, bool is_tail, int begin, int end) {
 
     auto formals = parse_formals(compile_stack[begin+1]);
 
-    auto code_lambda = [begin, end](){
-        Builder code{};
-        try {
-            compile_begin(&code, true, begin+1, end);
-            return code.finish();
-        } catch (...) {
-            code.dealloc();
-            throw;
-        }
-    }();
+    auto code_lambda = Builder::compile_to_code([begin, end](auto* code) {
+        compile_begin(code, true, begin+1, end);
+    });
 
     code->appends(op_lambda, ProtoLambda{code_lambda, formals});
 
@@ -343,20 +346,14 @@ static void compile_lambda(Builder* code, bool is_tail, int begin, int end) {
         code->append(op_ret);
 }
 
-static Code* compile_to_code(SXI expr, int csp) {
-    Builder code{};
-    try {
-        compile_expr(&code, true, csp, expr);
-        return code.finish();
-    } catch (...) {
-        code.dealloc();
-        throw;
-    }
-}
-
-Chunk* sxi::compile(SXI expr, Environment* env) {
-    auto code = compile_to_code(expr, 0);
-    auto thunk = gc_alloc<Chunk>();
-    *thunk = { .code = code, .env = env };
+Lambda* sxi::compile(SXI expr, Environment* env) {
+    auto code = Builder::compile_to_code([expr](auto* code) {
+        code->append(op_unlambda);
+        compile_expr(code, true, 0, expr);
+    });
+    auto args = gc_alloc<Formals>();
+    *args = {};
+    auto thunk = gc_alloc<Lambda>();
+    *thunk = { .code = code, .arguments = args, .capture = env };
     return thunk;
 }
