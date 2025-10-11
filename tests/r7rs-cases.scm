@@ -91,6 +91,32 @@
     [else #f])
    ==> 2))
 
+(section "4.2.8 Quasiquotation")
+
+(cases
+  ((let ((x 1) (y 2)) `(,x . ,y)) ==> (1 . 2))
+  ((let ((x 1) (y 2)) `(,x . y)) ==> (1 . y))
+  ((let ((x 1) (y 2)) `(x . ,y)) ==> (x . 2))
+  (`(list ,(+ 1 2) 4) ==> (list 3 4))
+  ((let ((name 'a))
+    `(list ,name ',name)) ==> (list a 'a))
+  ; (`(a ,(+ 1 2) ,@(map abs (4 -5 6)) b)
+  ;  ==> (a 3 4 5 6 b))
+  (`((foo ,(- 10 3)) ,@(cdr '(c)) . ,(car '(cons)))
+   ==> ((foo 7) . cons))
+  ; (`#(10 5 ,(sqrt 4) ,@(map sqrt '(16 9)) 8)
+  ;  ==> #(10 5 2 4 3 8))
+  ((let ((foo '(foo bar)) (@baz 'baz))
+    `(list ,@foo , @baz))
+   ==> (list foo bar baz)))
+
+(skip
+  (`(a `(b ,(+ 1 2) ,(foo ,(+ 1 3) d) e) f)
+   ==> (a `(b ,(+ 1 2) ,(foo 4 d) e) f))
+  ((let ((name1 'x) (name2 'y))
+    `(a `(b ,,name1 ,',name2 d) e))
+   ==> (a `(b ,x ,'y d) e)))
+
 (section "6.1 Equivalence predicates")
 
 (cases

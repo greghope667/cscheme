@@ -160,6 +160,23 @@ OP(op_tailcall): {
                         tos = wrap(env);
                         goto OP(op_ret);
                     }
+                    case SXI_FUNC_values: {
+                        if (cont->ip[0] != op_push) {
+                            if (args.length != 1)
+                                error("cannot return values to single-valued continuation");
+                            tos = args[0];
+                            goto OP(op_ret);
+                        }
+                        cont->ip++;
+                        cont->stack->reserve(cont->stack->capacity + args.length);
+                        memcpy(
+                            &cont->stack->data[cont->stack->length],
+                            args.data,
+                            args.length * sizeof(SXI)
+                        );
+                        cont->stack->length += args.length;
+                        goto OP(op_ret);
+                    }
                     default:
                         SXI_UNREACHABLE;
                 }

@@ -9,11 +9,13 @@
 (define (macroexpand expr env)
   (if (null? expr) ()
     (if (list? expr)
-      (begin
-        (define macro (assq (car expr) early-macros))
-        (if macro
-          (macroexpand ((cdr macro) (cdr expr)) env)
-          (map (lambda (e) (macroexpand e env)) expr)))
+      (if (eq? (car expr) 'quote)
+        expr
+        (begin
+          (define macro (assq (car expr) early-macros))
+          (if macro
+            (macroexpand ((cdr macro) (cdr expr)) env)
+            (map (lambda (e) (macroexpand e env)) expr))))
       expr)))
 
 (define (eval expr env)

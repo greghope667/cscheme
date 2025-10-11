@@ -29,6 +29,7 @@ static SXI disassemble(SXI value) {
 }
 
 static const function_1_def def1s[] = {
+    { "symbol?", [](SXI s) { return wrap_bool(instance<Symbol>(s)); } },
     { "display", display },
     { "write", display },
     { "disassemble", disassemble },

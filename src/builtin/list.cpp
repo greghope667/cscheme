@@ -2,6 +2,8 @@
 #include "sxi.hpp"
 #include "../error.hpp"
 
+#include <limits.h>
+
 using namespace sxi;
 
 static SXI cons(int argc, SXI* argv) {
@@ -152,6 +154,14 @@ static SXI list_copy(SXI l) {
     return copy.end();
 }
 
+static SXI listcons(int argc, SXI* argv) {
+    SXI_CHECK_ARITY(1, INT_MAX);
+    SXI head = argv[--argc];
+    while (argc --> 0)
+        head = cons(argv[argc], head);
+    return head;
+}
+
 static const function_1_def def1s[] = {
     { "pair?", [](SXI x) { return wrap_bool(instance<Pair>(x)); }},
     { "car", car },
@@ -168,6 +178,8 @@ static const function_1_def def1s[] = {
 static const function_n_def defns[] = {
     { "cons", cons },
     { "xcons", xcons },
+    { "list*", listcons },
+    { "cons*", listcons },
     { "set-car!", set_car },
     { "set-cdr!", set_cdr },
     { "list", list },

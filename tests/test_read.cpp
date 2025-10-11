@@ -53,6 +53,10 @@ static void test_read_symbols() {
 static void test_read_quote() {
     read_print_compare("'1", "(quote 1)");
     read_print_compare("'(1 2)", "(quote (1 2))");
+    read_print_compare(
+        "`(a ,b ,@c)",
+        "(quasiquote (a (unquote b) (unquote-splicing c)))"
+    );
     // read_print_compare("'", "(quote #eof)"); <-- desired?
 }
 

@@ -14,9 +14,9 @@ enum token_tag {
     dot,
     integer,
     ident,
-    // quasiquote,
-    // unquote,
-    // unquote_splicing,
+    t_quasiquote,
+    t_unquote,
+    t_unquote_s,
     lambda,
     t_character,
     t_string,
@@ -167,6 +167,15 @@ static token read_token(reader r) {
             return read_hash(r);
         case '\'':
             return { .tag = t_quote, .data=0 };
+        case '`':
+            return { .tag = t_quasiquote, .data=0 };
+        case ',':
+            if (ch = r.getc(); ch == '@') {
+                return { .tag = t_unquote_s, .data=0 };
+            } else {
+                r.ungetc(ch);
+                return { .tag = t_unquote, .data=0 };
+            }
         case ' ': case '\n': case '\t': case '\r':
             goto skip_space;
         case ';':
@@ -200,8 +209,11 @@ using namespace sxi;
 static SXI read_list(reader r);
 static SXI read_value(reader r);
 
-static Symbol* const symbol_quote = sxi::make_symbol("quote");
-static Symbol* const symbol_lambda = sxi::make_symbol("lambda");
+static Symbol* const symbol_quote      = sxi::make_symbol("quote");
+static Symbol* const symbol_quasiquote = sxi::make_symbol("quasiquote");
+static Symbol* const symbol_unquote    = sxi::make_symbol("unquote");
+static Symbol* const symbol_unquote_s  = sxi::make_symbol("unquote-splicing");
+static Symbol* const symbol_lambda     = sxi::make_symbol("lambda");
 
 static SXI read_quote_form(reader r, Symbol* quote) {
     return list({wrap(quote), read_value(r)});
@@ -215,6 +227,9 @@ static SXI read_value(reader r, token first) {
         case integer:       return wrap<sxi_int>(first.data);
         case ident:         return wrap((Symbol*)first.data);
         case t_quote:       return read_quote_form(r, symbol_quote);
+        case t_quasiquote:  return read_quote_form(r, symbol_quasiquote);
+        case t_unquote:     return read_quote_form(r, symbol_unquote);
+        case t_unquote_s:   return read_quote_form(r, symbol_unquote_s);
         case lambda:        return wrap(symbol_lambda);
         case t_character:   return wrap(sxi::character(first.data));
         case t_string:      return wrap((sxi::String*)first.data);
