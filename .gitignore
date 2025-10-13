@@ -4,7 +4,7 @@ build/
 
 src/scheme/
 
-**/a.out
+**/*.out
 **/perf.data*
 **/callgrind.out*
 

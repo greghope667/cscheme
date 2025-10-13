@@ -9,7 +9,7 @@
   (cond
     ((eq? head 'unquote) (cadr ls))
     ((eq? head 'unquote) (cons values (cdr ls)))
-    ((eq? head 'unquote-splicing) (cons apply (cons values (cdr ls))))
+    ((eq? head 'unquote-splicing) (cons* apply values (cdr ls)))
     (else (list cons* (qq-expand-term (car ls)) (qq-expand-term (cdr ls))))))
 
 (define (qq-expand expr)
