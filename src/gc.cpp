@@ -234,10 +234,7 @@ void mark_children(Code* c) {
 
 template <>
 void mark_children(Continuation* c) {
-    mark(c->code);
-    mark(c->env);
     mark(c->next);
-    mark(c->stack);
 }
 
 template <>
@@ -308,11 +305,16 @@ void sxi::gc_unprotect(SXI value) {
     error(value, "gc_unprotect() object was not protected");
 }
 
-void sxi::gc_run(Continuation* cont, SXI tos) {
+void sxi::gc_run(ExecStack& es, SXI tos) {
     for (auto p : gc_protected)
         mark(p);
     mark(tos);
-    mark(cont);
+    for (auto& frame : es.frames) {
+        mark(frame.code);
+        mark(frame.env);
+    }
+    for (auto v : es.stack)
+        mark(v);
 
     #define X(T) allocator<T>::instance.sweep();
     GC_TYPES

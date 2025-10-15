@@ -60,6 +60,8 @@ struct vector {
     auto begin(this auto&& self) { return self.data; }
     auto end(this auto&& self) { return self.data + self.length; }
 
+    auto& back(this auto&& self) { return self[self.length - 1]; }
+
     T& operator[](int i) { bounds_check(i, length); return data[i]; }
     sxi::span<T> span() { return { data, length }; }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sxi.hpp"
+#include "code.hpp"
 
 namespace sxi {
 
@@ -12,6 +13,6 @@ T* gc_alloc();
 void gc_protect(SXI value);
 
 struct Continuation;
-void gc_run(Continuation* cont, SXI tos);
+void gc_run(ExecStack& es, SXI tos);
 
 }

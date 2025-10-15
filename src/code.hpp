@@ -2,7 +2,6 @@
 
 #include "sxi.hpp"
 #include "tl.hpp"
-#include "vector.hpp"
 
 namespace sxi {
 
@@ -61,12 +60,21 @@ enum Function_s { SXI_FUNC_apply, SXI_FUNC_current_env, SXI_FUNC_values };
 template <> struct tt::traits<Function_s> : tt::tagged<SXI_TAG_function_s>, tt::unboxed {};
 
 struct Continuation {
-    Code* code;
-    opcode* ip;
     Continuation* next;
-    Environment* env;
-    Vector* stack;
 };
 template <> struct tt::traits<Continuation> : tt::boxed {};
+
+struct ExecStack {
+    struct ReturnFrame {
+        Code* code;
+        opcode* ip;
+        Environment* env;
+        int args_begin;
+        int args_end;
+    };
+
+    vector<ReturnFrame> frames;
+    vector<SXI> stack;
+};
 
 } // sxi

@@ -4,7 +4,6 @@
 #include "code.hpp"
 #include "alloc.hpp"
 #include "env.hpp"
-#include "vector.hpp"
 #include "error.hpp"
 
 #include "assert.h"
@@ -42,10 +41,11 @@ bind_lambda(Lambda* l, span<SXI> args) {
 #define UNIMPLEMENTED(op) [op] = &&OP(unimplemented)
 
 static __attribute__((noinline))
-SXI execute_(Code* code, Continuation* cont, Environment* env) {
+SXI execute_(Code* code, ExecStack fiber, Environment* env) {
     SXI tos = c_void;
     opcode* ip = code->insns;
-    Vector* stack = nullptr;
+    ExecStack::ReturnFrame* cont = &fiber.frames.back();
+    int fp = 0;
 
     static constexpr void* jump_table[] = {
         J(op_literal),
@@ -93,31 +93,24 @@ OP(op_set):
     NEXT;
 
 OP(op_push):
-    assert(stack->length < stack->capacity);
-    stack->data[stack->length++] = tos;
-    // stack->push(tos);
+    fiber.stack.push(tos);
     ip += 1;
     NEXT;
 
-OP(op_alloc_cont): {
-        auto new_cont = gc_alloc<Continuation>();
-        *new_cont = {
-            .code = code,
-            .ip = nullptr,
-            .next = cont,
-            .env = env,
-            .stack = stack,
-        };
-        cont = new_cont;
-        stack = nullptr;
-    }
+OP(op_alloc_cont):
+    fiber.frames.push({
+        .code = code,
+        .ip = nullptr,
+        .env = env,
+        .args_begin = fp,
+        .args_end = fiber.stack.length,
+    });
+    cont = &fiber.frames.back();
     ip += 1;
     NEXT;
 
 OP(op_alloc_stack):
-    stack = gc_alloc<Vector>();
-    *stack = {};
-    stack->reserve(ip[1]);
+    fp = fiber.stack.length;
     ip += 2;
     NEXT;
 
@@ -126,9 +119,9 @@ OP(op_call):
     goto OP(op_tailcall);
 
 OP(op_tailcall): {
-        assert(stack->length > 0);
-        auto function = stack->data[0];
-        auto args = span<SXI>(stack->data + 1, stack->length - 1);
+        assert(fiber.stack.length > fp);
+        auto function = fiber.stack.data[fp];
+        auto args = span<SXI>(fiber.stack.data + fp + 1, fiber.stack.length - fp - 1);
         match(function) {
             case_val(Function_n, f) {
                 tos = f(args.length, args.data);
@@ -145,11 +138,11 @@ OP(op_tailcall): {
                     case SXI_FUNC_apply: {
                         if (args.length < 2)
                             invalid_arguments(function, args);
-                        auto tail = stack->data[stack->length-1];
-                        memmove(stack->data, stack->data+1, (stack->length-2)*sizeof(SXI));
-                        stack->length -= 2;
+                        auto tail = fiber.stack.back();
+                        fp += 1;
+                        fiber.stack.length--;
                         while (tail != c_null) {
-                            stack->push(car(tail));
+                            fiber.stack.push(car(tail));
                             tail = cdr(tail);
                         }
                         goto OP(op_tailcall);
@@ -168,13 +161,12 @@ OP(op_tailcall): {
                             goto OP(op_ret);
                         }
                         cont->ip++;
-                        cont->stack->reserve(cont->stack->capacity + args.length);
-                        memcpy(
-                            &cont->stack->data[cont->stack->length],
+                        memmove(
+                            &fiber.stack[cont->args_end],
                             args.data,
                             args.length * sizeof(SXI)
                         );
-                        cont->stack->length += args.length;
+                        cont->args_end += args.length;
                         goto OP(op_ret);
                     }
                     default:
@@ -194,16 +186,19 @@ OP(op_tailcall): {
 
 OP(op_ret):
     if (gc_allocations > 4096)
-        gc_run(cont, tos);
+        gc_run(fiber, tos);
     code = cont->code;
     ip = cont->ip;
     env = cont->env;
-    stack = cont->stack;
+    fiber.stack.length = cont->args_end;
+    fp = cont->args_begin;
 
-    cont = cont->next;
+    fiber.frames.length--;
+    cont--;
     NEXT;
 
 OP(op_exit):
+    assert(fiber.stack.length == 0);
     return tos;
 
 OP(op_branch):
@@ -227,7 +222,7 @@ OP(op_lambda): {
     error_f("execute error: opcode '%s' not implemented", get_opcode_name(ip[0]));
 }
 
-static Continuation* make_exit_cont() {
+static ExecStack make_fiber() {
     auto exit_insns = alloc<opcode>(1);
     exit_insns[0] = op_exit;
 
@@ -236,14 +231,16 @@ static Continuation* make_exit_cont() {
     exit_fn->insns = exit_insns;
     exit_fn->insns_len = 1;
 
-    auto exit_cont = gc_alloc<Continuation>();
-    *exit_cont = {};
-    exit_cont->ip = exit_fn->insns;
-    exit_cont->code = exit_fn;
+    ExecStack fiber = {};
+    fiber.frames.push({
+        .code = exit_fn, .ip = exit_fn->insns,
+        .env = nullptr,
+        .args_begin = 0, .args_end = 0,
+    });
 
-    return exit_cont;
+    return fiber;
 }
 
 SXI sxi::call(Lambda* l, int argc, SXI* argv) {
-    return execute_(l->code, make_exit_cont(), bind_lambda(l, span(argv, argc)));
+    return execute_(l->code, make_fiber(), bind_lambda(l, span(argv, argc)));
 }
