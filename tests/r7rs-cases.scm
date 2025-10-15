@@ -91,6 +91,41 @@
     [else #f])
    ==> 2))
 
+(section "4.2.2 Binding constructs")
+
+(cases
+  ((let ((x 2) (y 3)) (* x y)) ==> 6)
+  ((let ((x 2) (y 3))
+    (let ((x 7) (z (+ x y)))
+      (* z x)))
+   ==> 35))
+
+(case1
+  (letrec*
+    ((even? (lambda (n) (if (zero? n) #t (odd?  (- n 1)))))
+     (odd?  (lambda (n) (if (zero? n) #f (even? (- n 1))))))
+    (even? 88)) ==> #t)
+
+(section "4.2.4 Iteration")
+
+(case1
+  (let loop ((numbers '(3 -2 1 6 -5))
+             (nonneg '())
+             (neg '()))
+    (cond
+      ((null? numbers) (list nonneg neg))
+      ((>= (car numbers) 0)
+       (loop
+         (cdr numbers)
+         (cons (car numbers) nonneg)
+         neg))
+      ((< (car numbers) 0)
+       (loop
+         (cdr numbers)
+         nonneg
+         (cons (car numbers) neg)))))
+  ==> ((6 1 3) (-5 -2)))
+
 (section "4.2.8 Quasiquotation")
 
 (cases

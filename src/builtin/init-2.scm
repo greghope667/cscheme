@@ -21,3 +21,23 @@
 
 (define (eval expr env)
   ((compile (macroexpand (qq-expand expr) env) env)))
+
+(define-early-macro 'when
+  (lambda (body)
+    `(if ,(car body) (begin . ,(cdr body)))))
+
+(define-early-macro 'letrec*
+  (lambda (body)
+    `((lambda ()
+        ,@(map (lambda (def) (cons 'define def)) (car body))
+        . ,(cdr body)))))
+
+(define-early-macro 'let
+  (lambda (body)
+    (define (inner-lambda body)
+      `(lambda ,(map car (car body)) . ,(cdr body)))
+    (if (symbol? (car body))
+      `((letrec* ((,(car body) ,(inner-lambda (cdr body)))) ,(car body))
+        . ,(map cadr (cadr body)))
+      `(,(inner-lambda body)
+        . ,(map cadr (car body))))))

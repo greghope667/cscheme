@@ -23,13 +23,6 @@
   (define compiled (compile expanded env))
   (compiled))
 
-(define-early-macro 'let
-  (lambda (body)
-    (define names (map car (car body)))
-    (define values (map cadr (car body)))
-    (define body (cdr body))
-    (cons (list 'lambda names (cons 'begin body)) values)))
-
 (define-early-macro 'cond
   (lambda (body)
     (define name (gensym))

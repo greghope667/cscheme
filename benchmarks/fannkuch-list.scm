@@ -29,9 +29,9 @@
   (append (reverse ls) tail))
 
 (define (fannkuch-list ls)
-  (define (flr ls n)
-    (if (eqv? (car ls) 1) n (flr (flip-head! (car ls) ls) (+ n 1))))
-  (flr ls 0))
+  (let loop ((ls ls) (n 0))
+    (if (eqv? (car ls) 1) n
+      (loop (flip-head! (car ls) ls) (+ n 1)))))
 
 (define (fannkuch-max ls)
   (define m 0)
