@@ -57,9 +57,9 @@
     (add4 6))
    ==> 10))
 
-(skip
+(cases
   (((lambda x x) 3 4 5 6) ==> (3 4 5 6))
-  (((lambda (x y . z) z)) ==> (5 6)))
+  (((lambda (x y . z) z) 3 4 5 6) ==> (5 6)))
 
 (cases
   ((if (> 3 2) 'yes 'no) ==> yes)
@@ -90,6 +90,18 @@
     [(assv 'b '((a 1) (b 2))) => cadr]
     [else #f])
    ==> 2))
+
+(cases
+  ((and (= 2 2) (> 2 1)) ==> #t)
+  ((and (= 2 2) (< 2 1)) ==> #f)
+  ((and 1 2 'c '(f g)) ==> (f g))
+  ((and) ==> #t))
+
+(cases
+  ((or (= 2 2) (> 2 1)) ==> #t)
+  ((or (= 2 2) (< 2 1)) ==> #t)
+  ((or #f #f #f) ==> #f)
+  ((or (memq 'b '(a b c)) (/ 3 0)) ==> (b c)))
 
 (section "4.2.2 Binding constructs")
 

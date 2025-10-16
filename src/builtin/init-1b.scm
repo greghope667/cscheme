@@ -1,3 +1,6 @@
+;; Early Macroexpander
+;; Expands and, or, cond
+;; Used to bootstrap the full macro expander
 (define early-macros '())
 
 (define (define-early-macro name transformer)
@@ -60,21 +63,16 @@
 
 (define-early-macro 'and
   (lambda (body)
-    (define name (gensym))
     (define (nested arg rest)
       (if (null? rest)
         arg
         (list
           'begin
-          (list 'set! name arg)
-          (list 'if name
+          (list 'if arg
             (nested (car rest) (cdr rest))
             #f))))
     (if (null? body) #t
-      (list
-        (list 'lambda (list name)
-          (nested (car body) (cdr body)))
-        (begin)))))
+      (nested (car body) (cdr body)))))
 
 (set-early-macro! 'cond
   (lambda (body)

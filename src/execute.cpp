@@ -13,13 +13,20 @@ using namespace sxi;
 
 static Environment*
 bind_lambda(Lambda* l, span<SXI> args) {
-    if (l->arguments->is_variadic)
-        error("variadics not implemented");
-
     int len = l->arguments->names.length;
 
-    if (len != args.length)
-        invalid_arguments(wrap(l), args);
+    if (l->arguments->is_variadic) {
+        if (len - 1 > args.length)
+            invalid_arguments(wrap(l), args);
+        auto variadics = c_null;
+        for (int i = args.length-1; i >= len-1; i--) {
+            variadics = cons(args[i], variadics);
+        }
+        args[len-1] = variadics;
+    } else {
+        if (len != args.length)
+            invalid_arguments(wrap(l), args);
+    }
 
     auto env = gc_alloc<Environment>();
     *env = { .parent = l->capture, .table = {} };

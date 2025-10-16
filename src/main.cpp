@@ -25,17 +25,21 @@ static bool rep(FILE* f, sxi::Environment* env, bool print) {
 struct options_s {
     const char* expr;
     const char* script;
+    bool interactive;
 
     static options_s parse(int argc, char** argv) {
         int opt;
         options_s options = {};
-        while ((opt = getopt(argc, argv, "c:s:")) != -1) {
+        while ((opt = getopt(argc, argv, "c:s:i")) != -1) {
             switch (opt) {
                 case 'c':
                     options.expr = optarg;
                     break;
                 case 's':
                     options.script = optarg;
+                    break;
+                case 'i':
+                    options.interactive = true;
                     break;
                 default:
                     exit(EXIT_FAILURE);
@@ -72,6 +76,8 @@ int main(int argc, char** argv) {
         while (rep(stream, env, false)) {};
         fclose(stream);
     } else {
-        do { printf("> "); } while (rep(stdin, env, true));
+        options.interactive = true;
     }
+    if (options.interactive)
+        do { printf("> "); } while (rep(stdin, env, true));
 };

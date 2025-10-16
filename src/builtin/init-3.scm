@@ -21,7 +21,7 @@
 ; use this instead.
 
 (define (symbol-identifier=? a b)
-  (define (unwrap? x) (if (identifier? x) (identifier-symbol x) x))
+  (define (unwrap x) (if (identifier? x) (identifier-symbol x) x))
   (eq? (unwrap a) (unwrap b)))
 
 ;; Macros are bound transformers
@@ -41,10 +41,10 @@
 
 (define (add-scope expr scope)
   (cond
-    ((pair? expr
-      (cons
-        (add-scope (car expr) scope)
-        (add-scope (cdr expr) scope))))
+    ((pair? expr)
+     (cons
+       (add-scope (car expr) scope)
+       (add-scope (cdr expr) scope)))
 
     ((symbol? expr) (make-struct identifier expr scope))
     (else expr)))
@@ -69,7 +69,7 @@
         (define scope (next-timestamp))
         (set! envs (cons (cons scope (macro-env macro)) envs))
         (expand ((macro-transformer macro) expr 0 scope))))
-    (else (map expand expr))))
+    (else (pair-map expand expr))))
 
 (define (new-bindings args current)
   (define (rename s)
@@ -84,27 +84,47 @@
     ((assoc id bindings bound-identifier=?) => cdr)
     (else (list 'env-ref
             (cdr (assv (identifier-scope id) envs))
-            sym))))
+            (list 'quote sym)))))
 
 (define (unstamp expr bindings)
   (cond
-    ((form? expr 'lambda
-      (begin
-        (define new (new-bindings (cadr expr) bindings))
-        (cons 'lambda (unstamp (cdr expr) new)))))
-    ((pair? expr
-      (map (lambda (v) (unstamp v bindings)) expr)))
+    ((form? expr 'lambda)
+     (begin
+       (define new (new-bindings (cadr expr) bindings))
+       (cons 'lambda (unstamp (cdr expr) new))))
+    ((pair? expr)
+     (cons (unstamp (car expr) bindings) (unstamp (cdr expr) bindings)))
     ((eq? (struct-typeof expr) identifier)
      (unstamp-identifier expr bindings))
     (else expr)))
 
+(define show
+  (make-struct macro
+    (lambda (form target-scope new-scope)
+      (define expr (cadr form))
+      `(begin
+        (display ',expr)
+        (display " = ")
+        (,(add-scope 'display new-scope) ,expr)
+        (newline)))
+    (current-env)))
 
-(define (macroexpand expr env)
-  (set! envs (list (cons 0 env)))
-  (set! expr (add-scope expr (reset-timestamp)))
-  (set! expr (expand expr))
-  (set! expr (unstamp expr ()))
-  expr)
+(define (early-macroexpand expr)
+  (cond
+    ((null? expr) ())
+    ((not (list? expr)) expr)
+    ((eq? (car expr) 'quote) expr)
+    ((assoc (car expr) early-macros symbol-identifier=?)
+     => (lambda (m) (early-macroexpand ((cdr m) (cdr expr)))))
+    (else (pair-map early-macroexpand expr))))
+
+;(define (macroexpand expr env)
+;  (set! envs (list (cons 0 env)))
+;  (set! expr (add-scope expr (reset-timestamp)))
+;  (set! expr (expand expr))
+;  (set! expr (unstamp expr ()))
+;  (set! expr (early-macroexpand expr))
+;  expr)
 
 
 ;;(define (eval expr env)
@@ -118,3 +138,22 @@
 ;;          (list make-struct macro (caddr expr) env))
 ;;        env)))
 ;;    (else ((compile (macroexpand (qq-expand expr) env) env)))))
+
+
+;(define-early-macro 'and-let*
+;  (lambda (body)
+;    (define args (car body))
+;    (set! body (cdr body))
+;    (define name (gensym))
+;    (list
+;      (list 'lambda (list name)
+;        (let loop ((args args))
+;          (cond
+;            ((null? args) (cons 'begin body))
+;            ((identifier? (caar args))
+;             `(begin (define . ,(car args)) (if ,(caar args) ,(loop (cdr args)) #f)))
+;            (else
+;             `(begin (set! ,name ,(caar args)) (if ,name ,(loop (cdr args)) #f))))))
+;             `(if ,(caar args) ,(loop (cdr args)) #f))))))
+;      #f)))
+;

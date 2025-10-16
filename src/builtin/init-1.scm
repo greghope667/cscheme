@@ -1,3 +1,4 @@
+;; Some useful list-manipulation functions, mostly from srfi-1.
 (define (cddr x) (general-car-cdr x #b100))
 (define (cdar x) (general-car-cdr x #b101))
 (define (cadr x) (general-car-cdr x #b110))
@@ -11,10 +12,6 @@
 (define (cadar x) (general-car-cdr x #b1101))
 (define (caadr x) (general-car-cdr x #b1110))
 (define (caaar x) (general-car-cdr x #b1111))
-
-(define first car)
-(define second cadr)
-(define third caddr)
 
 (define (list-map1 f ls)
   (if (null? ls) ()
@@ -32,17 +29,17 @@
   (if tail (car tail) #f))
 
 (define (member key list cmp)
-  (if (void? cmp) (set! cmp equal?))
   (list-find-tail (lambda (v) (cmp key v)) list))
 
 (define (memq key list) (member key list eq?))
 (define (memv key list) (member key list eqv?))
 
 (define (assoc key alist cmp)
-  (if (void? cmp) (set! cmp equal?))
   (list-find (lambda (v) (cmp key (car v))) alist))
 
 (define (assq key alist) (assoc key alist eq?))
 (define (assv key alist) (assoc key alist eqv?))
 
 (define map list-map1)
+
+(define (pair-map fn pair) (cons (fn (car pair)) (fn (cdr pair))))
