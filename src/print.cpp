@@ -118,18 +118,17 @@ static void print_string(FILE* f, String* str) {
 }
 
 static void print_struct_type(FILE* f, StructType* st) {
-    fprintf(f, "#<struct type %p %s ( ", st, symbol_name(st->name));
+    fprintf(f, "#<struct-type %s ( ", symbol_name(st->name));
     for (auto name : st->field_names)
         fprintf(f, "%s ", symbol_name(name));
     fprintf(f, ")>");
 }
 
 static void print_struct(FILE* f, StructInstance* si) {
-    fprintf(f, "#<struct %p %s (", si, symbol_name(si->type->name));
+    fprintf(f, "#<%s (", symbol_name(si->type->name));
     for (int i=0; i<si->fields.length; i++) {
-        fprintf(f, " %s = ", symbol_name(si->type->field_names[i]));
+        fprintf(f, " %s=", symbol_name(si->type->field_names[i]));
         print(f, si->fields[i]);
-        fputc(',', f);
     }
     fprintf(f, " )>");
 }
@@ -175,7 +174,7 @@ void sxi::print(FILE* f, SXI value) {
             break;
         }
         default:
-            fprintf(f, "#<%s value 0x%zx>", get_tag_name(value._tag), value._integer);
+            fprintf(f, "#<%s 0x%zx>", get_tag_name(value._tag), value._integer);
             break;
     }
 }

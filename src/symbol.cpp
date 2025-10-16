@@ -48,7 +48,7 @@ const char* sxi::symbol_name(const Symbol* sym) {
         return static_cast<const InternedSymbol*>(sym)->data;
     } else {
         static char gensym_name[32] = {};
-        snprintf(gensym_name, sizeof(gensym_name), "#<gensym%zx>", n - GENSYM_BASE);
+        snprintf(gensym_name, sizeof(gensym_name), "#<gensym%zu>", n - GENSYM_BASE);
         return gensym_name;
     }
 }

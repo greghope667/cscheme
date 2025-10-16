@@ -6,9 +6,6 @@
 (define (define-early-macro name transformer)
   (set! early-macros (cons (cons name transformer) early-macros)))
 
-(define (set-early-macro! name transformer)
-  (set-cdr! (assq name early-macros) transformer))
-
 (define (macroexpand expr env)
   (if (null? expr) ()
     (if (list? expr)
@@ -74,7 +71,7 @@
     (if (null? body) #t
       (nested (car body) (cdr body)))))
 
-(set-early-macro! 'cond
+(define-early-macro 'cond
   (lambda (body)
     (define name (gensym))
     (define (nested clause rest)

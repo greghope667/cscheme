@@ -25,10 +25,6 @@
 (define (eval expr env)
   ((compile (macroexpand (qq-expand expr) env) env)))
 
-(define-early-macro 'when
-  (lambda (body)
-    `(if ,(car body) (begin . ,(cdr body)))))
-
 (define-early-macro 'letrec*
   (lambda (body)
     `((lambda ()
