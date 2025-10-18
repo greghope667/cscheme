@@ -206,6 +206,8 @@ OP(op_ret):
 
 OP(op_exit):
     assert(fiber.stack.length == 0);
+    fiber.stack.dealloc();
+    fiber.frames.dealloc();
     return tos;
 
 OP(op_branch):
