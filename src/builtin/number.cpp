@@ -29,7 +29,8 @@ template <typename Compare>
 static bool compare(int argc, SXI* argv, Compare comp) {
     if (argc == 2)
         return comp(as<sxi_int>(argv[0]), as<sxi_int>(argv[1]));
-    SXI_CHECK_ARITY(2, INT_MAX);
+    if (argc < 2)
+        return true;
 
     auto current = as<sxi_int>(argv[0]);
     for (auto v : span(argv+1, argc-1)) {

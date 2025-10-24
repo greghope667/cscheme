@@ -1,5 +1,8 @@
 #include "builtin.hpp"
 #include "../env.hpp"
+#include "../string.hpp"
+
+#include <limits.h>
 
 using namespace sxi;
 
@@ -40,6 +43,15 @@ static SXI env_ref(int argc, SXI* argv) {
     }
 }
 
+static SXI error(int argc, SXI* argv) {
+    SXI_CHECK_ARITY(1, INT_MAX);
+    auto str = as<String>(argv[0]);
+    SXI obj = c_null;
+    for (int i=argc; i --> 1;)
+        obj = cons(argv[i], obj);
+    error(obj, str->data());
+}
+
 static const function_1_def def1s[] = {
     { "symbol?", [](SXI s) { return wrap_bool(instance<Symbol>(s)); } },
     { "display", display },
@@ -53,6 +65,7 @@ static const function_n_def defns[] = {
     { "gensym", gensym },
     { "compile", compile },
     { "env-ref", env_ref },
+    { "error", error },
 };
 
 const builtin_lib sxi::builtin_lib_misc(def1s, defns);

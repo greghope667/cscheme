@@ -15,19 +15,6 @@ static Environment*
 bind_lambda(Lambda* l, span<SXI> args) {
     int len = l->arguments->names.length;
 
-    if (l->arguments->is_variadic) {
-        if (len - 1 > args.length)
-            invalid_arguments(wrap(l), args);
-        auto variadics = c_null;
-        for (int i = args.length-1; i >= len-1; i--) {
-            variadics = cons(args[i], variadics);
-        }
-        args[len-1] = variadics;
-    } else {
-        if (len != args.length)
-            invalid_arguments(wrap(l), args);
-    }
-
     auto env = gc_alloc<Environment>();
     *env = { .parent = l->capture, .table = {} };
     env->table.items.reserve(len);
@@ -36,9 +23,30 @@ bind_lambda(Lambda* l, span<SXI> args) {
     for (int i=0; i<len; i++) {
         env->table.items[i] = {
             .key = l->arguments->names[i],
-            .value = args[i]
+            .value = c_false,
         };
     }
+
+    if (l->arguments->is_variadic) {
+        if (len - 1 > args.length)
+            invalid_arguments(wrap(l), args);
+
+        for (int i=0; i<len-1; i++)
+            env->table.items[i].value = args[i];
+
+        auto variadics = c_null;
+        for (int i = args.length-1; i >= len-1; i--) {
+            variadics = cons(args[i], variadics);
+        }
+
+        env->table.items[len-1].value = variadics;
+    } else {
+        if (len != args.length)
+            invalid_arguments(wrap(l), args);
+        for (int i=0; i<len; i++)
+            env->table.items[i].value = args[i];
+    }
+
     return env;
 }
 

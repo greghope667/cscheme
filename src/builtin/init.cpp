@@ -20,11 +20,16 @@ const char init_4[] = {
     #embed "init-1b.scm"
 };
 
+const char init_5[] = {
+    #embed "init-5.scm"
+};
+
 constexpr span<const char> init_files[] = {
     { init_1, sizeof(init_1 ) },
     { init_4, sizeof(init_4 ) },
     { init_2, sizeof(init_2 ) },
     { init_3, sizeof(init_3 ) },
+    { init_5, sizeof(init_5 ) },
 };
 
 Environment* sxi::run_init_scm_code() {

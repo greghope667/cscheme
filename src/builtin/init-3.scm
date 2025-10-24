@@ -33,6 +33,12 @@
     ((symbol? expr) (make-struct identifier expr scope))
     (else expr)))
 
+(define (remove-scope expr)
+  (cond
+    [(pair? expr) (pair-map remove-scope expr)]
+    [(identifier? expr) (identifier-symbol expr)]
+    [else expr]))
+
 ;; Macros are bound transformers
 
 (define macro (make-struct-type 'macro 'transformer 'env))

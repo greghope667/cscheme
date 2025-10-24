@@ -59,7 +59,9 @@
 
 (cases
   (((lambda x x) 3 4 5 6) ==> (3 4 5 6))
-  (((lambda (x y . z) z) 3 4 5 6) ==> (5 6)))
+  (((lambda (x y . z) z) 3 4 5 6) ==> (5 6))
+  ;; extra case - zero variable arguments
+  (((lambda x x)) ==> ()))
 
 (cases
   ((if (> 3 2) 'yes 'no) ==> yes)
