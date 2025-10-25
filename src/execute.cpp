@@ -125,7 +125,7 @@ OP(op_alloc_cont):
     NEXT;
 
 OP(op_alloc_stack):
-    fp = fiber.stack.length;
+    fp = fiber.stack.length = cont->args_end;
     ip += 2;
     NEXT;
 
