@@ -10,9 +10,9 @@ namespace sxi {
 
 [[noreturn]] void error_f(const char*, ...);
 
-static inline void bounds_check(int index, int length) {
+static inline void bounds_check(ptrdiff_t index, ptrdiff_t length) {
     if (index < 0 || index >= length)
-        sxi::error_f("index out of range (%i > %i)", index, length);
+        sxi::error_f("index out of range (%li > %li)", index, length);
 }
 
 template <typename T>
@@ -23,7 +23,7 @@ struct span {
     auto begin(this auto&& self) { return self.data; }
     auto end(this auto&& self) { return self.data + self.length; }
 
-    T& operator[](int i) { bounds_check(i, length); return data[i]; }
+    T& operator[](ptrdiff_t i) { bounds_check(i, length); return data[i]; }
 };
 
 template <typename T>
@@ -62,7 +62,7 @@ struct vector {
 
     auto& back(this auto&& self) { return self[self.length - 1]; }
 
-    T& operator[](int i) { bounds_check(i, length); return data[i]; }
+    T& operator[](ptrdiff_t i) { bounds_check(i, length); return data[i]; }
     sxi::span<T> span() { return { data, length }; }
 
     // static constexpr vector empty() { return vector{}; }
@@ -144,7 +144,7 @@ struct string {
         }
     }
 
-    char& operator[](int i) { bounds_check(i, length_); return data()[i]; }
+    char& operator[](ptrdiff_t i) { bounds_check(i, length_); return data()[i]; }
     sxi::span<char> span() { return { data(), length_ }; }
 };
 static_assert(sizeof(string) == 16);

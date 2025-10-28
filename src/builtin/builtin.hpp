@@ -35,6 +35,7 @@ extern const builtin_lib builtin_lib_bool;
 extern const builtin_lib builtin_lib_struct;
 extern const builtin_lib builtin_lib_number;
 extern const builtin_lib builtin_lib_misc;
+extern const builtin_lib builtin_lib_vector;
 
 Environment* run_init_scm_code();
 }

@@ -32,3 +32,18 @@
     ((list (values 1 2 3)) ==> (1 2 3))
     ((+ (apply values '(1 2 3))) ==> 6)
     ((+ (values (values 1 2))) ==> 3))
+
+(cases
+    ((let ((v (vector 1 2 3)))
+      (vector-append! v #(4 5) #(6 7))
+      v)
+     ==> #(1 2 3 4 5 6 7))
+    ((let ((v (vector 1 2 3)))
+      (vector-push! v 4)
+      (vector-push! v 5)
+      v)
+     ==> #(1 2 3 4 5))
+    ((let ((v (vector 1 2 3)))
+      (define x (vector-pop! v))
+      (list v x))
+     ==> (#(1 2) 3)))

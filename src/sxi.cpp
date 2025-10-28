@@ -33,6 +33,17 @@ bool sxi::equal(SXI l, SXI r) {
                     return false;
             return true;
         }
+        case_ptr(Vector, vec) {
+            if (not instance<Vector>(r)) return false;
+            auto rvec = as<Vector>(r);
+            auto len = vec->length;
+            if (len != rvec->length) return false;
+            for (int i=0; i<len; i++) {
+                if (not equal(vec->data[i], rvec->data[i]))
+                    return false;
+            }
+            return true;
+        }
         default:
             return false;
     }

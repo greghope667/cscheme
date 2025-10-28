@@ -21,12 +21,12 @@
 
 (cases
   ((quote a) ==> a)
-  ;((quote #(a b c)) ==> #(a b c))
+  ((quote #(a b c)) ==> #(a b c))
   ((quote (+ 1 2)) ==> (+ 1 2)))
 
 (cases
   ('a ==> a)
-  ;('#(a b c) ==> #(a b c))
+  ('#(a b c) ==> #(a b c))
   ('() ==> ())
   ('(+ 1 2) ==> (+ 1 2))
   ('(quote a) ==> (quote a))
@@ -39,8 +39,8 @@
   ("abc" ==> "abc")
   ('#\a ==> #\a)
   (#\a ==> #\a)
-  ;('#(a 10) ==> #(a 10))
-  ;(#(a 10) ==> #(a 10))
+  ('#(a 10) ==> #(a 10))
+  (#(a 10) ==> #(a 10))
   ;('#u8(64 65) ==> #(64 65))
   ;(#u8(64 65) ==> #(64 65))
   ('#t ==> #t)
@@ -184,7 +184,7 @@
 
 (cases
   ((eqv? "" "") ==>? boolean?)
-  ;((eqv? '#() '#()) ==>? boolean?)
+  ((eqv? '#() '#()) ==>? boolean?)
   ((eqv? (lambda (x) x) (lambda (x) x)) ==>? boolean?)
   ((eqv? (lambda (x) x) (lambda (y) y)) ==>? boolean?))
   ;((eqv? 1.0e0 1.0e0) ==>? boolean?)
@@ -211,8 +211,8 @@
   ((equal? '(a) '(a)) ==> #t)
   ((equal? '(a (b) c) '(a (b) c)) ==> #t)
   ((equal? "abc" "abc") ==> #t)
-  ((equal? 2 2) ==> #t))
-  ;((equal? (make-vector 5 'a) (make-vector 5 'a)) ==> #t))
+  ((equal? 2 2) ==> #t)
+  ((equal? (make-vector 5 'a) (make-vector 5 'a)) ==> #t))
 
 (section "6.3 Booleans")
 
@@ -246,8 +246,8 @@
 (cases
   ((pair? '(a . b)) ==> #t)
   ((pair? '(a b c)) ==> #t)
-  ((pair? '()) ==> #f))
-  ;((pair? '#(a b) ==> #f)))
+  ((pair? '()) ==> #f)
+  ((pair? '#(a b)) ==> #f))
 
 (cases
   ((cons 'a '()) ==> (a))
@@ -321,3 +321,46 @@
     (define l (list 'a 'b 'e))
     (list-set! l 2 'c)
     l) ==> (a b c)))
+
+(section "6.8 Vectors")
+
+(cases
+  ((vector? #()) ==> #t)
+  ((vector 'a 'b 'c) ==> #(a b c))
+  ((vector-length #(1 2 3)) ==> 3)
+  ((vector-ref '#(0 1 1 2 3 5 8 13 21) 5) ==> 5)
+  ((let ((vec (vector 0 '(2 2 2 2) "Anna")))
+    (vector-set! vec 1 '("Sue" "Sue"))
+    vec) ==> #(0 ("Sue" "Sue") "Anna")))
+
+(cases
+  ((vector->list #(dah dah didah)) ==> (dah dah didah))
+  ((vector->list #(dah dah didah) 1 2) ==> (dah))
+  ((list->vector '(dididit dah)) ==> #(dididit dah)))
+
+(cases
+  ((let ()
+    (define a #(1 8 2 8))
+    (define b (vector-copy a))
+    (vector-set! b 0 3)
+    (define c (vector-copy b 1 3))
+    (list b c))
+   ==> (#(3 8 2 8) #(8 2))))
+
+(cases
+  ((let ()
+    (define a (vector 1 2 3 4 5))
+    (define b (vector 10 20 30 40 50))
+    (vector-copy! b 1 a 0 2)
+    b)
+   ==> #(10 1 2 40 50)))
+
+(cases
+  ((vector-append #(a b c) #(d e f)) ==> #(a b c d e f)))
+
+(cases
+  ((let ()
+    (define a (vector 1 2 3 4 5))
+    (vector-fill! a 'smash 2 4)
+    a)
+   ==> #(1 2 smash smash 5)))

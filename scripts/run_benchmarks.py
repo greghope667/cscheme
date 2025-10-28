@@ -84,24 +84,31 @@ def fmt_stat(xs, ys):
 
 
 results = { benchmark: measure_benchmark(benchmark, args.repeats) for benchmark in benchmarks }
-    
+
 if (args.compare):
     with open(args.compare, 'r') as f:
         other = json.load(f)
 
     t = Table(
-            'Benchmark', 
-            'Time / ms', 'Prev Time / ms', 'Effect', '%', 'Z', 
+            'Benchmark',
+            'Time / ms', 'Prev Time / ms', 'Effect', '%', 'Z',
             'Page Faults', 'Prev Page Faults', 'Effect', '%', 'Z'
     )
 
     for name, stats in results.items():
-        other_stats = other[name]
-        t.add(
-                name, 
-                *fmt_stat(stats['times'], other_stats['times']),
-                *fmt_stat(stats['pages'], other_stats['pages']),
-        )
+        if name in other:
+            other_stats = other[name]
+            t.add(
+                    name,
+                    *fmt_stat(stats['times'], other_stats['times']),
+                    *fmt_stat(stats['pages'], other_stats['pages']),
+            )
+        else:
+            t.add(
+                    name,
+                    fmt_list(stats['times']), '-', '-', '-', '-',
+                    fmt_list(stats['pages']), '-', '-', '-', '-',
+            )
     t.draw()
 else:
     t = Table('Benchmark', 'Time / ms', 'Page Faults')
@@ -112,4 +119,3 @@ else:
 if (args.save):
     with open(args.save, 'w') as f:
         json.dump(results, f)
-
