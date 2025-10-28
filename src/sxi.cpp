@@ -1,6 +1,7 @@
 #include "string.hpp"
 #include "struct.hpp"
 #include "match.hpp"
+#include "vector.hpp"
 
 using namespace sxi;
 
@@ -35,4 +36,8 @@ bool sxi::equal(SXI l, SXI r) {
         default:
             return false;
     }
+}
+
+void sxi::vector_push(Vector* vec, SXI value) {
+    vec->push(value);
 }

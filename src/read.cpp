@@ -20,6 +20,7 @@ enum token_tag {
     lambda,
     t_character,
     t_string,
+    t_vector,
 };
 
 struct token {
@@ -117,6 +118,7 @@ static token read_hash(reader r) {
         case 'o':   return { .tag = integer, .data = read_number(r, 8) };
         case 'd':   return { .tag = integer, .data = read_number(r, 10) };
         case 'x':   return { .tag = integer, .data = read_number(r, 16) };
+        case '(':   return { .tag = t_vector, .data = {} };
         default:    sxi::error_f("read error: illegal escape: '#%c'", ch);
     }
 }
@@ -207,6 +209,7 @@ static token read_token(reader r) {
 using namespace sxi;
 
 static SXI read_list(reader r);
+static SXI read_vector(reader r);
 static SXI read_value(reader r);
 
 static Symbol* const symbol_quote      = sxi::make_symbol("quote");
@@ -233,6 +236,7 @@ static SXI read_value(reader r, token first) {
         case lambda:        return wrap(symbol_lambda);
         case t_character:   return wrap(sxi::character(first.data));
         case t_string:      return wrap((sxi::String*)first.data);
+        case t_vector:      return read_vector(r);
 
         case rparen: case dot:
             error("read error: unexpected token");
@@ -265,6 +269,20 @@ static SXI read_list(reader r) {
                 auto p = make_pair(read_value(r, t), c_null);
                 *tail = wrap(p);
                 tail = &p->second;
+        }
+    }
+}
+
+static SXI read_vector(reader r) {
+    auto vec = make_vector();
+    for (;;) {
+        switch (token t = read_token(r); t.tag) {
+            case eof:
+                error("read error: unexpected eof");
+            case rparen:
+                return wrap(vec);
+            default:
+                vector_push(vec, read_value(r, t));
         }
     }
 }

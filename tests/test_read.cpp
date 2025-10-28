@@ -93,6 +93,11 @@ static void test_read_number_base() {
     read_compare("#x101", wrap(0x101z));
 }
 
+static void test_read_vector() {
+    read_print_compare("#(1 2 3)", "#(1 2 3)");
+    read_print_compare("#(a b c)", "#(a b c)");
+}
+
 TEST_LIST = {
     { "test_read_int", test_read_int },
     { "test_read_constants", test_read_constants },
@@ -102,5 +107,6 @@ TEST_LIST = {
     { "test_read_comment", test_read_comment },
     { "test_read_chars", test_read_chars },
     { "test_read_number_base", test_read_number_base },
+    { "test_read_vector", test_read_vector },
     { NULL, NULL },
 };

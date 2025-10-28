@@ -74,6 +74,14 @@ static void test_print_string() {
         print_and_compare(wrap(sxi::make_string(in)), out);
 }
 
+static void test_print_vector() {
+    auto vec = sxi::make_vector();
+    sxi::vector_push(vec, wrap(1z));
+    sxi::vector_push(vec, wrap(2z));
+    sxi::vector_push(vec, wrap(3z));
+    print_and_compare(wrap(vec), "#(1 2 3)");
+}
+
 TEST_LIST = {
     { "test_memstream", test_memstream },
     { "test_print_int", test_print_int },
@@ -82,5 +90,6 @@ TEST_LIST = {
     { "test_print_improper_list", test_print_improper_list },
     { "test_print_chars", test_print_chars },
     { "test_print_string", test_print_string },
+    { "test_print_vector", test_print_vector },
     { NULL, NULL },
 };

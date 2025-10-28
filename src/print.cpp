@@ -3,6 +3,7 @@
 #include "match.hpp"
 #include "string.hpp"
 #include "struct.hpp"
+#include "vector.hpp"
 
 #include <stdio.h>
 
@@ -133,6 +134,23 @@ static void print_struct(FILE* f, StructInstance* si) {
     fprintf(f, " )>");
 }
 
+static void print_vector(FILE* f, Vector* vec) {
+    if (vec->length == 0) {
+        fprintf(f, "#()");
+        return;
+    }
+    fprintf(f, "#(");
+    for (auto p = vec->begin(), final = vec->end()-1; ; p++) {
+        print(f, *p);
+        if (p == final) {
+            fputc(')', f);
+            break;
+        } else {
+            fputc(' ', f);
+        }
+    }
+}
+
 void sxi::print(FILE* f, SXI value) {
     match(value) {
         case_int(i) {
@@ -171,6 +189,10 @@ void sxi::print(FILE* f, SXI value) {
         }
         case_ptr(StructInstance, si) {
             print_struct(f, si);
+            break;
+        }
+        case_ptr(Vector, v) {
+            print_vector(f, v);
             break;
         }
         default:

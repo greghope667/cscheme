@@ -355,3 +355,14 @@ String* sxi::make_string(const char* data, int len) {
 String* sxi::make_string(const char* data) {
     return make_string(data, strlen(data));
 }
+
+Vector* sxi::make_vector(int len) {
+    auto vec = gc_alloc<Vector>();
+    *vec = {};
+    if (len > 0) {
+        vec->reserve(len);
+        vec->length = len;
+        memset(vec->data, 0, len * sizeof(SXI));
+    }
+    return vec;
+}

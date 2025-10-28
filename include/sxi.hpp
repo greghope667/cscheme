@@ -230,6 +230,16 @@ String* make_string(const char* str);
 String* make_string(const char* str, int len);
 char* string_data(String*, int* len = nullptr);
 
+/// Vectors ///
+
+struct Vector;
+template <> struct tt::traits<Vector> : tt::tagged<SXI_TAG_vector>, tt::boxed {};
+
+Vector* make_vector(int len = 0);
+SXI* vector_data(Vector*, int* len = nullptr);
+SXI* vector_ref(Vector*, int index);
+void vector_push(Vector*, SXI value);
+
 /// Environments ///
 
 struct Environment;
