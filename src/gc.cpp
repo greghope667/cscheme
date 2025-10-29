@@ -305,16 +305,17 @@ void sxi::gc_unprotect(SXI value) {
     error(value, "gc_unprotect() object was not protected");
 }
 
-void sxi::gc_run(ExecStack& es, SXI tos) {
+void sxi::gc_run(Fiber& es) {
     for (auto p : gc_protected)
         mark(p);
-    mark(tos);
     for (auto& frame : es.frames) {
         mark(frame.code);
         mark(frame.env);
     }
     for (auto v : es.stack)
         mark(v);
+    mark(es.tos);
+    mark(es.globals);
 
     #define X(T) allocator<T>::instance.sweep();
     GC_TYPES

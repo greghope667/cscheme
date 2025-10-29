@@ -50,196 +50,195 @@ bind_lambda(Lambda* l, span<SXI> args) {
     return env;
 }
 
-#define OP(op) _label_ ## op
-#define NEXT goto* jump_table[*ip]
-#define J(op) [op] = &&OP(op)
-#define UNIMPLEMENTED(op) [op] = &&OP(unimplemented)
+using Stack = vector<SXI>;
 
-static __attribute__((noinline))
-SXI execute_(Code* code, ExecStack fiber, Environment* env) {
-    SXI tos = c_void;
-    opcode* ip = code->insns;
-    ExecStack::ReturnFrame* cont = &fiber.frames.back();
-    int fp = 0;
+#if __has_attribute(preserve_none)
+#define PRESERVE_NONE __attribute__((preserve_none))
+#else
+#warning preserve_none not supported
+#define PRESERVE_NONE
+#endif
 
-    static constexpr void* jump_table[] = {
-        J(op_literal),
-        J(op_ret),
-        J(op_lookup),
-        J(op_alloc_cont),
-        J(op_alloc_stack),
-        J(op_push),
-        J(op_call),
-        J(op_tailcall),
-        J(op_exit),
-        J(op_branch),
-        J(op_branch0),
-        J(op_define),
-        J(op_set),
-        J(op_lambda),
-        J(op_unlambda),
-    };
+#define MUSTTAIL __attribute((musttail))
 
-    NEXT;
+#define ARGS (Fiber* fiber, opcode* ip, Code* code, Stack* stack, Environment* locals)
+#define NEXT(l) MUSTTAIL return dispatch_table[ip[l]](fiber, ip+l, code, stack, locals)
+#define JUMP(op) MUSTTAIL return (ex_ ## op)(fiber, ip, code, stack, locals)
 
-OP(op_unlambda):
-    env = env->parent;
-    ip += 1;
-    NEXT;
+using opcode_fn = PRESERVE_NONE SXI ARGS;
 
-OP(op_literal):
-    tos = code->literals[ip[1]];
-    ip += 2;
-    NEXT;
+#define X(op) static opcode_fn ex_ ## op;
+OPCODES
+#undef X
 
-OP(op_lookup):
-    tos = env->lookup(code->symbols[ip[1]]);
-    ip += 2;
-    NEXT;
+static constexpr opcode_fn* dispatch_table[] = {
+    #define X(op) ex_ ## op,
+    OPCODES
+    #undef X
+};
 
-OP(op_define):
-    env->define(code->symbols[ip[1]], tos);
-    ip += 2;
-    NEXT;
+#define EX(op) static PRESERVE_NONE SXI ex_ ## op ARGS
 
-OP(op_set):
-    env->set(code->symbols[ip[1]], tos);
-    ip += 2;
-    NEXT;
-
-OP(op_push):
-    fiber.stack.push(tos);
-    ip += 1;
-    NEXT;
-
-OP(op_alloc_cont):
-    fiber.frames.push({
-        .code = code,
-        .ip = nullptr,
-        .env = env,
-        .args_begin = fp,
-        .args_end = fiber.stack.length,
-    });
-    cont = &fiber.frames.back();
-    ip += 1;
-    NEXT;
-
-OP(op_alloc_stack):
-    fp = fiber.stack.length = cont->args_end;
-    ip += 2;
-    NEXT;
-
-OP(op_call):
-    cont->ip = ip + 1;
-    goto OP(op_tailcall);
-
-OP(op_tailcall): {
-        assert(fiber.stack.length > fp);
-        auto function = fiber.stack.data[fp];
-        auto args = span<SXI>(fiber.stack.data + fp + 1, fiber.stack.length - fp - 1);
-        match(function) {
-            case_val(Function_n, f) {
-                tos = f(args.length, args.data);
-                goto OP(op_ret);
-            }
-            case_val(Function_1, f) {
-                if (args.length != 1)
-                    invalid_arguments(function, args);
-                tos = f(args[0]);
-                goto OP(op_ret);
-            }
-            case_val(Function_s, f) {
-                switch (f) {
-                    case SXI_FUNC_apply: {
-                        if (args.length < 2)
-                            invalid_arguments(function, args);
-                        auto tail = fiber.stack.back();
-                        fp += 1;
-                        fiber.stack.length--;
-                        while (tail != c_null) {
-                            fiber.stack.push(car(tail));
-                            tail = cdr(tail);
-                        }
-                        goto OP(op_tailcall);
-                    }
-                    case SXI_FUNC_current_env: {
-                        if (args.length > 0)
-                            invalid_arguments(function, args);
-                        tos = wrap(env);
-                        goto OP(op_ret);
-                    }
-                    case SXI_FUNC_values: {
-                        if (cont->ip[0] != op_push) {
-                            if (args.length != 1)
-                                error("cannot return values to single-valued continuation");
-                            tos = args[0];
-                            goto OP(op_ret);
-                        }
-                        cont->ip++;
-                        memmove(
-                            &fiber.stack[cont->args_end],
-                            args.data,
-                            args.length * sizeof(SXI)
-                        );
-                        cont->args_end += args.length;
-                        goto OP(op_ret);
-                    }
-                    default:
-                        SXI_UNREACHABLE;
-                }
-            }
-            case_lambda(l) {
-                env = bind_lambda(l, args);
-                code = l->code;
-                ip = code->insns;
-                NEXT;
-            }
-            default:
-                error(function, "object is not callable");
-        }
-    }
-
-OP(op_ret):
-    if (gc_allocations > 4096)
-        gc_run(fiber, tos);
-    code = cont->code;
-    ip = cont->ip;
-    env = cont->env;
-    fiber.stack.length = cont->args_end;
-    fp = cont->args_begin;
-
-    fiber.frames.length--;
-    cont--;
-    NEXT;
-
-OP(op_exit):
-    assert(fiber.stack.length == 0);
-    fiber.stack.dealloc();
-    fiber.frames.dealloc();
-    return tos;
-
-OP(op_branch):
-    ip += ip[1];
-    NEXT;
-
-OP(op_branch0):
-    ip += is_truthy(tos) ? 2 : ip[1];
-    NEXT;
-
-OP(op_lambda): {
-        auto pl = code->lambdas[ip[1]];
-        auto lambda = gc_alloc<Lambda>();
-        *lambda = { pl.code, pl.arguments, env };
-        tos = wrap(lambda);
-        ip += 2;
-        NEXT;
-    }
-
-[[maybe_unused]] OP(unimplemented):
-    error_f("execute error: opcode '%s' not implemented", get_opcode_name(ip[0]));
+EX(op_exit) {
+    assert(stack->length == 0);
+    assert(fiber->frames.length == 0);
+    (void)ip;
+    (void)code;
+    (void)locals;
+    return fiber->tos;
 }
 
-static ExecStack make_fiber() {
+EX(op_unlambda) {
+    locals = locals->parent;
+    NEXT(1);
+}
+
+EX(op_literal) {
+    fiber->tos = code->literals[ip[1]];
+    NEXT(2);
+}
+
+EX(op_lambda) {
+    auto pl = code->lambdas[ip[1]];
+    auto lambda = gc_alloc<Lambda>();
+    *lambda = { pl.code, pl.arguments, locals };
+    fiber->tos = wrap(lambda);
+    NEXT(2);
+}
+
+EX(op_push) {
+    stack->push(fiber->tos);
+    NEXT(1);
+}
+
+EX(op_lookup) {
+    fiber->tos = locals->lookup(code->symbols[ip[1]]);
+    NEXT(2);
+}
+
+EX(op_define) {
+    locals->define(code->symbols[ip[1]], fiber->tos);
+    NEXT(2);
+}
+
+EX(op_set) {
+    locals->set(code->symbols[ip[1]], fiber->tos);
+    NEXT(2);
+}
+
+EX(op_branch) {
+    auto dist = ip[1];
+    NEXT(dist);
+}
+
+EX(op_branch0) {
+    auto dist = is_truthy(fiber->tos) ? 2 : ip[1];
+    NEXT(dist);
+}
+
+EX(op_alloc_cont) {
+    fiber->frames.push({
+        .code = code,
+        .ip = nullptr,
+        .env = locals,
+        .args_begin = fiber->cont->args_end,
+        .args_end = stack->length,
+    });
+    fiber->cont = &fiber->frames.back();
+    NEXT(1);
+}
+
+EX(op_alloc_stack) {
+    stack->length = fiber->cont->args_end;
+    NEXT(2);
+}
+
+EX(op_ret) {
+    if (gc_allocations > 4096)
+        gc_run(*fiber);
+    auto cont = fiber->cont;
+    code = cont->code;
+    ip = cont->ip;
+    locals = cont->env;
+    stack->length = cont->args_end;
+    fiber->frames.length--;
+    fiber->cont--;
+    NEXT(0);
+}
+
+EX(op_call) {
+    fiber->cont->ip = ip + 1;
+    JUMP(op_tailcall);
+}
+
+EX(op_tailcall) {
+    int fp = fiber->cont->args_end;
+    assert(stack->length > fp);
+    auto function = stack->data[fp];
+    auto args = span<SXI>(stack->data + fp + 1, stack->length - fp - 1);
+    match(function) {
+        case_val(Function_n, f) {
+            fiber->tos = f(args.length, args.data);
+            JUMP(op_ret);
+        }
+        case_val(Function_1, f) {
+            if (args.length != 1)
+                invalid_arguments(function, args);
+            fiber->tos = f(args[0]);
+            JUMP(op_ret);
+        }
+        case_val(Function_s, f) {
+            switch (f) {
+                case SXI_FUNC_apply: {
+                    if (args.length < 2)
+                        invalid_arguments(function, args);
+                    auto tail = stack->back();
+                    memmove(stack->data + fp, stack->data + fp + 1, (args.length-1)*sizeof(SXI));
+                    stack->length -= 2;
+                    while (tail != c_null) {
+                        stack->push(car(tail));
+                        tail = cdr(tail);
+                    }
+                    JUMP(op_tailcall);
+                }
+                case SXI_FUNC_current_env: {
+                    if (args.length > 0)
+                        invalid_arguments(function, args);
+                    fiber->tos = wrap(locals);
+                    JUMP(op_ret);
+                }
+                case SXI_FUNC_values: {
+                    if (fiber->cont->ip[0] != op_push) {
+                        if (args.length != 1)
+                            error("cannot return values to single-valued continuation");
+                        fiber->tos = args[0];
+                        JUMP(op_ret);
+                    }
+                    fiber->cont->ip++;
+                    memmove(
+                        &stack->data[fiber->cont->args_end],
+                        args.data,
+                        args.length * sizeof(SXI)
+                    );
+                    fiber->cont->args_end += args.length;
+                    JUMP(op_ret);
+                }
+                default:
+                    SXI_UNREACHABLE;
+            }
+        }
+        case_lambda(l) {
+            locals = bind_lambda(l, args);
+            code = l->code;
+            ip = code->insns;
+            NEXT(0);
+        }
+        default:
+            error(function, "object is not callable");
+    }
+}
+
+static Fiber make_fiber(Environment* globals) {
     auto exit_insns = alloc<opcode>(1);
     exit_insns[0] = op_exit;
 
@@ -248,16 +247,25 @@ static ExecStack make_fiber() {
     exit_fn->insns = exit_insns;
     exit_fn->insns_len = 1;
 
-    ExecStack fiber = {};
+    Fiber fiber = {};
     fiber.frames.push({
         .code = exit_fn, .ip = exit_fn->insns,
         .env = nullptr,
         .args_begin = 0, .args_end = 0,
     });
 
+    fiber.cont = &fiber.frames.back();
+    fiber.globals = globals;
+
     return fiber;
 }
 
 SXI sxi::call(Lambda* l, int argc, SXI* argv) {
-    return execute_(l->code, make_fiber(), bind_lambda(l, span(argv, argc)));
+    auto locals = bind_lambda(l, span(argv, argc));
+    auto fiber = make_fiber(l->capture);
+    auto ip = l->code->insns;
+    auto v = dispatch_table[*ip](&fiber, ip, l->code, &fiber.stack, locals);
+    fiber.stack.dealloc();
+    fiber.frames.dealloc();
+    return v;
 }

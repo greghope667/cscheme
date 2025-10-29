@@ -5,22 +5,31 @@
 
 namespace sxi {
 
+#define OPCODES \
+    X(op_literal) \
+    X(op_ret) \
+    X(op_lookup) \
+    X(op_alloc_cont) \
+    X(op_alloc_stack) \
+    X(op_push) \
+    X(op_call) \
+    X(op_tailcall) \
+    X(op_exit) \
+    X(op_branch) \
+    X(op_branch0) \
+    X(op_define) \
+    X(op_set) \
+    X(op_lambda) \
+    X(op_unlambda) \
+
+#define X(op) +1
+constexpr int OPCODE_MAX = (OPCODES);
+#undef X
+
 enum opcode : int16_t {
-    op_literal,
-    op_ret,
-    op_lookup,
-    op_alloc_cont,
-    op_alloc_stack,
-    op_push,
-    op_call,
-    op_tailcall,
-    op_exit,
-    op_branch,
-    op_branch0,
-    op_define,
-    op_set,
-    op_lambda,
-    op_unlambda,
+    #define X(op) op ,
+    OPCODES
+    #undef X
 };
 
 const char* get_opcode_name(opcode op);
@@ -64,7 +73,7 @@ struct Continuation {
 };
 template <> struct tt::traits<Continuation> : tt::boxed {};
 
-struct ExecStack {
+struct Fiber {
     struct ReturnFrame {
         Code* code;
         opcode* ip;
@@ -75,6 +84,9 @@ struct ExecStack {
 
     vector<ReturnFrame> frames;
     vector<SXI> stack;
+    Environment* globals;
+    SXI tos;
+    ReturnFrame* cont;
 };
 
 } // sxi

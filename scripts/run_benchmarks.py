@@ -12,6 +12,7 @@ parser.add_argument('-s', '--save')
 parser.add_argument('-c', '--compare')
 parser.add_argument('-r', '--repeats', type=int, default=5)
 parser.add_argument('-d', '--delay', type=float, default=0.2)
+parser.add_argument('-q', '--quiet', action='store_true')
 
 args = parser.parse_args()
 
@@ -55,7 +56,8 @@ def measure_benchmark(benchmark, runs):
         times.append((rafter.ru_utime - rbefore.ru_utime) * 1000)
         pages.append(rafter.ru_minflt - rbefore.ru_minflt)
 
-    print(benchmark, times, pages)
+    if not args.quiet:
+        print(benchmark, times, pages)
     return { 'times': times, 'pages': pages }
 
 average = lambda xs: sum(xs)/len(xs)

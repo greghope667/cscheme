@@ -203,26 +203,11 @@ void sxi::print(FILE* f, SXI value) {
 
 const char* sxi::get_opcode_name(opcode op) {
     switch (op) {
-        case op_literal:        return "literal";
-        case op_ret:            return "ret";
-        case op_lookup:         return "lookup";
-        case op_alloc_cont:     return "alloc_cont";
-        case op_alloc_stack:    return "alloc_stack";
-        case op_push:           return "push";
-        case op_call:           return "call";
-        case op_tailcall:       return "tailcall";
-        case op_exit:           return "exit";
-        case op_branch:         return "branch";
-        case op_branch0:        return "branch0";
-        case op_define:         return "define";
-        case op_set:            return "set";
-        case op_lambda:         return "lambda";
-        case op_unlambda:       return "unlambda";
+        #define X(op) case op: return #op;
+        OPCODES
+        #undef X
     }
-    static char opname[32];
-    snprintf(opname, 32, "<op %i>", op);
-    fprintf(stderr, "WARNING: opcode %s has no name\n", opname);
-    return opname;
+    error_f("opcode %i has no name\n", op);
 }
 
 static void disassemble_code(FILE* f, Code* code) {
@@ -235,7 +220,7 @@ static void disassemble_code(FILE* f, Code* code) {
     auto insns = code->insns;
     while (ip < len) {
         auto op = insns[ip];
-        printf("%8i:  %-24s", ip, get_opcode_name(op));
+        printf("%8i:  %-24s", ip, get_opcode_name(op)+3);
 
         switch (op) {
             case op_literal:

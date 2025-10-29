@@ -13,6 +13,6 @@ T* gc_alloc();
 void gc_protect(SXI value);
 
 struct Continuation;
-void gc_run(ExecStack& es, SXI tos);
+void gc_run(Fiber& es);
 
 }
