@@ -51,9 +51,7 @@
 (define (expander func . args)
   ;; Expander state
 
-  (define j 0)
-  (define envs ())
-  (define (next-timestamp) (set! j (+ j 1)))
+  (define envs #())
 
   (define (form? expr label)
     (and (pair? expr) (symbol-identifier=? (car expr) label)))
@@ -64,7 +62,7 @@
     (and
       (identifier? (car expr))
       (begin
-        (define env (cdr (assv (identifier-scope (car expr)) envs)))
+        (define env (vector-ref envs (identifier-scope (car expr))))
         (define value (env-ref env (identifier-symbol (car expr)) #f))
         (and (macro? value) value))))
 
@@ -79,8 +77,8 @@
       [(symbol-identifier=? (car expr) 'quote) expr]
       [(lookup-macro expr) =>
        (lambda (macro)
-         (define scope (next-timestamp))
-         (set! envs (cons (cons scope (macro-env macro)) envs))
+         (define scope (vector-length envs))
+         (vector-push! envs (macro-env macro))
          (expand-form ((macro-transformer macro) expr 0 scope)))]
       [else (cons (expand-form (car expr)) (expand (cdr expr)))]))
 
@@ -105,7 +103,7 @@
       ((memq sym '(if define set! begin lambda quote)) sym)
       ((assoc id bindings bound-identifier=?) => cdr)
       (else (list 'env-ref
-              (cdr (assv (identifier-scope id) envs))
+              (vector-ref envs (identifier-scope id))
               (list 'quote sym)))))
 
   (define (unstamp expr bindings)
@@ -131,7 +129,7 @@
   ;; Run full expander
 
   (define (run expr env)
-    (set! envs (list (cons 0 env)))
+    (set! envs (vector env))
     ;(display 'before:) (newline) (display expr) (newline)
     (set! expr (add-scope expr 0))
     (set! expr (expand-form expr))
