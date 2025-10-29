@@ -1,0 +1,40 @@
+(define (gen-numbers n)
+  (define A (make-vector n))
+  (let loop ([i 0] [z 0])
+    (if (< i n)
+      (begin
+        (vector-set! A i z)
+        (loop (+ i 1) (remainder (+ z 618033) 1000000)))))
+  A)
+
+(define (swap! v i j)
+  (define tmp (vector-ref v i))
+  (vector-set! v i (vector-ref v j))
+  (vector-set! v j tmp))
+
+(define (quicksort A)
+  (define (qs lo hi)
+    (if (and (< lo hi) (<= 0 lo))
+      (let ([p (partition lo hi)])
+        (qs lo (- p 1))
+        (qs (+ p 1) hi))))
+
+  (define (partition lo hi)
+    (define pivot (vector-ref A hi))
+    (define i lo)
+    (let loop ([j lo])
+      (if (<= (vector-ref A j) pivot)
+        (begin
+          (swap! A i j)
+          (set! i (+ i 1))))
+      (if (< j (- hi 1)) (loop (+ j 1))))
+    (swap! A i hi)
+    i)
+
+  (qs 0 (- (vector-length A) 1))
+  A)
+
+(define A (gen-numbers 20000))
+(quicksort A)
+(display (vector-ref A 1000))
+(newline)
