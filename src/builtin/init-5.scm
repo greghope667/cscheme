@@ -105,7 +105,7 @@
     (cond
       [(eq? pattern '_) ()]
       [(symbol? pattern) (cons (list pattern expr) ())]
-      [(not (pair? pattern)) (if (eqv? pattern expr) () #f)]
+      [(not (pair? pattern)) (if (equal? pattern expr) () #f)]
       [(eq? (car pattern) 'literal) (and (symbol-identifier=? (cadr pattern) expr) ())]
       [(eq? (car pattern) 'escape) (cons (list (cadr pattern) expr) ())]
       [(eq? (car pattern) 'ellipsis) (match-ellipsis (cadr pattern) (caddr pattern) expr)]
@@ -149,7 +149,9 @@
        (let ((bindings (get-bindings first)))
         (if (null? bindings)
           (error "template has no bindings" template)
-          (list 'ellipsis first (get-bindings first))))]
+          (cons
+            (list 'ellipsis first (get-bindings first))
+            (compile (cddr template) ellipsis))))]
       [else (cons first (compile remainder ellipsis))]))
 
   (define (compile template ellipsis)
@@ -166,9 +168,10 @@
     (define new-values (map unwrap bindings))
     (unless (apply = (map list-length new-values))
       (error "Ellipsis length mismatch" new-values))
-    (list-mapn
-      (lambda vs (expand template (map list bindings vs)))
-      new-values))
+    (apply values
+      (list-mapn
+       (lambda vs (expand template (map list bindings vs)))
+       new-values)))
 
   (define (expand template match)
     (cond
@@ -177,13 +180,14 @@
       [(eq? (car template) 'literal) (add-scope (cadr template) scope)]
       [(eq? (car template) 'escape) (cadr (assq (cadr template) match))]
       [(eq? (car template) 'ellipsis) (expand-ellipsis (cadr template) (caddr template) match)]
-      [else (cons (expand (car template) match) (expand (cdr template) match))]))
+      [else (cons* (expand (car template) match) (expand (cdr template) match))]))
 
   (expand template match))
 
 
 (define (syntax-rules-expander patterns+templates)
   (lambda (expr caller-env macro-env)
+    (set! expr (cdr expr))
     (let loop ([p+t patterns+templates])
       (if (null? p+t)
         (error "syntax-rules failed to match any patterns" (remove-scope expr))
@@ -196,7 +200,7 @@
 (define-syntax syntax-rules
   ((lambda ()
     (define pattern
-      (car (list (syntax-pattern-compile '(_ (literals ...) (pattern template) ...) '... ()))))
+      (car (list (syntax-pattern-compile '(_ (literals ...) ((_ . pattern) template) ...) '... ()))))
     (lambda (expr caller-env macro-env)
       (set! expr (remove-scope expr))
       (define match (syntax-pattern-match pattern expr))
