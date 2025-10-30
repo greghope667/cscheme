@@ -94,13 +94,15 @@ struct Builder {
     template <typename CompileFn>
     static Code* compile_to_code(CompileFn fn) {
         Builder code{};
-        try {
+        Code* c;
+        SXI_TRY {
             fn(&code);
-            return code.finish();
-        } catch (...) {
+            c = code.finish();
+        } SXI_CATCH(_) {
             code.dealloc();
-            throw;
+            SXI_THROW;
         }
+        return c;
     }
 };
 

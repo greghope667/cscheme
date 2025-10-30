@@ -52,3 +52,7 @@ bool sxi::equal(SXI l, SXI r) {
 void sxi::vector_push(Vector* vec, SXI value) {
     vec->push(value);
 }
+
+#ifdef SXI_USE_SETJMP
+sxi::jmp_buf_chain* sxi::jmp_buf_chain::top = nullptr;
+#endif

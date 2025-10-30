@@ -220,6 +220,10 @@ const char* symbol_name(const Symbol* sym);
 size_t symbol_table_size();
 Symbol* gensym();
 
+namespace symbols {
+    extern Symbol* const quote;
+}
+
 /// Strings ///
 
 struct String;
@@ -279,8 +283,7 @@ SXI read(FILE*);
 
 SXI eval(SXI expr, Environment* env);
 static inline SXI quote(SXI value) {
-    static auto quote_sym = wrap(make_symbol("quote"));
-    return cons(quote_sym, cons(value, c_null));
+    return cons(wrap(symbols::quote), cons(value, c_null));
 }
 
 /// Print ///
@@ -296,16 +299,37 @@ void gc_unprotect(SXI value);
 
 } // sxi
 
-#if 1
+#ifndef SXI_USE_SETJMP
 #define SXI_TRY try
 #define SXI_CATCH(e) catch (sxi::Error e)
 #define SXI_THROW throw sxi::Error{}
 #else
-// idea for when exceptions are disabled
-// _error_jmp should actually be a chain though
 #include <setjmp.h>
-namespace sxi { inline sigjmp_buf _error_jmp; }
-#define SXI_TRY if (not sigsetjmp(sxi::_error_jmp, 0))
-#define SXI_CATCH(e) else if (sxi::Error e; true)
-#define SXI_THROW siglongjmp(sxi::_error_jmp, 1)
+#include <assert.h>
+namespace sxi {
+    struct jmp_buf_chain {
+        static jmp_buf_chain* top;
+
+        jmp_buf_chain* next;
+        jmp_buf buf;
+
+        jmp_buf_chain() : next(top) { top = this; }
+        jmp_buf_chain(const jmp_buf_chain&) = delete;
+        jmp_buf_chain(jmp_buf_chain&&) = delete;
+        void pop() { top = next; }
+
+        static void dothrow() __attribute__((noreturn)) {
+            assert(top);
+            _longjmp(top->buf, 1);
+        }
+    };
+}
+#define SXI_TRY \
+    if (sxi::jmp_buf_chain _try_{}; not _setjmp(_try_.buf)) {
+
+#define SXI_CATCH(e) \
+        _try_.pop(); \
+    } else if (auto e = (_try_.pop(), sxi::Error{}); true) \
+
+#define SXI_THROW sxi::jmp_buf_chain::dothrow()
 #endif

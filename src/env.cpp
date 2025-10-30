@@ -47,15 +47,16 @@ Environment* sxi::make_environment_rootlet() {
 }
 
 Environment* sxi::interaction_environment() {
-    static auto env = run_init_scm_code();
+    static Environment* env;
+    if (not env) env = run_init_scm_code();
     return make_environment(env);
 }
 
+static auto eval_sym = make_symbol("eval");
+
 SXI sxi::eval(SXI expr, Environment* env) {
-    static auto eval_sym = make_symbol("eval");
-    static auto quote = wrap(make_symbol("quote"));
     SXI eval;
     if (env->try_lookup(eval_sym, &eval))
-        expr = list({eval, list({quote, expr}), wrap(env)});
+        expr = list({eval, quote(expr), wrap(env)});
     return execute(compile(expr, env));
 }

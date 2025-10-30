@@ -59,3 +59,5 @@ Symbol* sxi::gensym() {
 }
 
 size_t symbol_table_size();
+
+Symbol* const sxi::symbols::quote = make_symbol("quote");
