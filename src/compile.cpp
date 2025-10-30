@@ -81,6 +81,8 @@ struct Builder {
 
         c->literals_len = literals.length;
         c->literals = take(literals);
+
+        c->name = {};
         return c;
     }
 
@@ -292,6 +294,7 @@ static void compile_define(Builder* code, bool is_tail, int begin, int end) {
         identifier = p->first;
         compile_stack[begin+1] = p->second;
         compile_lambda(code, false, begin, end);
+        code->lambdas.back().code->name = as<Symbol>(identifier);
     } else if (end - begin == 3) {
         // (define identifier expr)
         identifier = compile_stack[begin+1];

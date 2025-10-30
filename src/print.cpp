@@ -1,4 +1,5 @@
 #include "code.hpp"
+#include "env.hpp"
 #include "sxi.hpp"
 #include "match.hpp"
 #include "string.hpp"
@@ -24,7 +25,7 @@ const char* sxi::get_tag_name(sxi_tag tag) {
     case SXI_TAG_string:    return "string";
     case SXI_TAG_struct_type:       return "struct type";
     case SXI_TAG_struct_instance:   return "struct instance";
-    default:                break;
+    case SXI_TAG_vector:    return "vector";
     }
     static char tagname[32];
     snprintf(tagname, 32, "<tag %i>", tag);
@@ -126,12 +127,12 @@ static void print_struct_type(FILE* f, StructType* st) {
 }
 
 static void print_struct(FILE* f, StructInstance* si) {
-    fprintf(f, "#<%s (", symbol_name(si->type->name));
+    fprintf(f, "#<%s", symbol_name(si->type->name));
     for (int i=0; i<si->fields.length; i++) {
         fprintf(f, " %s=", symbol_name(si->type->field_names[i]));
         print(f, si->fields[i]);
     }
-    fprintf(f, " )>");
+    fprintf(f, ">");
 }
 
 static void print_vector(FILE* f, Vector* vec) {
@@ -170,7 +171,10 @@ void sxi::print(FILE* f, SXI value) {
             break;
         }
         case_lambda(lambda) {
-            fprintf(f, "#<lambda %p ", lambda);
+            if (lambda->code->name)
+                fprintf(f, "#<lambda %s ", symbol_name(lambda->code->name));
+            else
+                fprintf(f, "#<lambda %p ", lambda);
             print_formals(f, lambda->arguments);
             fputc('>', f);
             break;
@@ -195,6 +199,14 @@ void sxi::print(FILE* f, SXI value) {
             print_vector(f, v);
             break;
         }
+        case SXI_TAG_function_1:
+        case SXI_TAG_function_n:
+        case SXI_TAG_function_s:
+            if (auto name = get_function_name(value._integer))
+                fprintf(f, "#<function %s>", name);
+            else
+                fprintf(f, "#<function 0x%zx>", value._integer);
+            break;
         default:
             fprintf(f, "#<%s 0x%zx>", get_tag_name(value._tag), value._integer);
             break;

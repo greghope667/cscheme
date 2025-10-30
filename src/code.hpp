@@ -45,6 +45,7 @@ struct Code {
     int16_t symbols_len;
     int16_t literals_len;
     int16_t lambdas_len;
+    Symbol* name;
 };
 template <> struct tt::traits<Code> : tt::boxed {};
 

@@ -260,12 +260,38 @@ static Fiber make_fiber(Environment* globals) {
     return fiber;
 }
 
+static void print_stacktrace(Fiber& fiber) {
+    int depth = 0;
+    for (auto& frame : fiber.frames) {
+        printf("Frame %i: [%i:%i]\n\t", depth++, frame.args_begin, frame.args_end);
+        for (int i = frame.args_begin; i<frame.args_end; i++) {
+            print(stdout, fiber.stack[i]);
+            putchar(' ');
+        }
+        putchar('\n');
+    }
+    printf("Frame %i: [%i:%i]\n\t", depth, fiber.cont->args_end, fiber.stack.length);
+    for (int i = fiber.cont->args_end; i<fiber.stack.length; i++) {
+        print(stdout, fiber.stack[i]);
+        putchar(' ');
+    }
+    putchar('\n');
+}
+
 SXI sxi::call(Lambda* l, int argc, SXI* argv) {
     auto locals = bind_lambda(l, span(argv, argc));
     auto fiber = make_fiber(l->capture);
     auto ip = l->code->insns;
-    auto v = dispatch_table[*ip](&fiber, ip, l->code, &fiber.stack, locals);
-    fiber.stack.dealloc();
-    fiber.frames.dealloc();
+    SXI v;
+    SXI_TRY {
+        v = dispatch_table[*ip](&fiber, ip, l->code, &fiber.stack, locals);
+        fiber.stack.dealloc();
+        fiber.frames.dealloc();
+    } SXI_CATCH(_) {
+        print_stacktrace(fiber);
+        fiber.stack.dealloc();
+        fiber.frames.dealloc();
+        SXI_THROW;
+    }
     return v;
 }

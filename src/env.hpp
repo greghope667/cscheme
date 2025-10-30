@@ -55,4 +55,6 @@ struct Environment {
     }
 };
 
+const char* get_function_name(uintptr_t address);
+
 } // sxi

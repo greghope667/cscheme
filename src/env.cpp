@@ -56,7 +56,43 @@ static auto eval_sym = make_symbol("eval");
 
 SXI sxi::eval(SXI expr, Environment* env) {
     SXI eval;
-    if (env->try_lookup(eval_sym, &eval))
-        expr = list({eval, quote(expr), wrap(env)});
-    return execute(compile(expr, env));
+    if (env->try_lookup(eval_sym, &eval) && instance<Lambda>(eval)) {
+        return call(as<Lambda>(eval), { expr, wrap(env) });
+    } else {
+        return execute(compile(expr, env));
+    }
+}
+
+static auto function_names = []{
+    insert_only_map<uintptr_t, const char*, [](auto x){ return x; }> table{};
+
+    auto insert = [&](const char* name, uintptr_t value) {
+        auto [found, loc] = table.lookup(value);
+        if (not found) table.append(value, name, loc);
+    };
+
+    auto add = [&](const builtin_lib& lib) {
+        for (auto [name, func] : lib.function_1)
+            insert(name, uintptr_t(func));
+        for (auto [name, func] : lib.function_n)
+            insert(name, uintptr_t(func));
+    };
+
+    add(builtin_lib_list);
+    add(builtin_lib_bool);
+    add(builtin_lib_struct);
+    add(builtin_lib_number);
+    add(builtin_lib_misc);
+    add(builtin_lib_vector);
+
+    insert("apply", SXI_FUNC_apply);
+    insert("current-env", SXI_FUNC_current_env);
+    insert("values", SXI_FUNC_values);
+
+    return table;
+}();
+
+const char* sxi::get_function_name(uintptr_t address) {
+    auto [found, loc] = function_names.lookup(address);
+    return found ? function_names.items[loc].value : nullptr;
 }

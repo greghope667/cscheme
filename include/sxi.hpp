@@ -267,6 +267,11 @@ static inline SXI execute(Lambda* l) { return call(l, 0, 0); }
 Lambda* compile(SXI expr, Environment* env);
 void disassemble(FILE*, const Lambda*);
 
+template <size_t N>
+static SXI call(Lambda* l, SXI (&&args)[N]) {
+    return call(l, N, args);
+}
+
 /// C-Functions ///
 
 using Function_n = SXI (*)(int, SXI*);
