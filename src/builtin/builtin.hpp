@@ -37,7 +37,7 @@ extern const builtin_lib builtin_lib_number;
 extern const builtin_lib builtin_lib_misc;
 extern const builtin_lib builtin_lib_vector;
 
-inline builtin_lib builtin_libraries[] = {
+static inline const builtin_lib builtin_libraries[] = {
     builtin_lib_list,
     builtin_lib_bool,
     builtin_lib_struct,

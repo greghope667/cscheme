@@ -71,6 +71,16 @@ struct allocator {
         state states[N];
         entry entries[N];
 
+        entry* init() {
+            memset(states, inactive, sizeof(states));
+            entry* e = nullptr;
+            for (auto i=N; i-->0;) {
+                entries[i].next_free = e;
+                e = &entries[i];
+            }
+            return e;
+        }
+
         T* alloc(T* x) {
             auto offset = reinterpret_cast<entry*>(x) - entries;
             SXI_ASSERT(0 <= offset && (size_t)offset < N);
@@ -128,19 +138,17 @@ struct allocator {
             free_list = free_list->next_free;
             auto b = block_of(x);
             return b->alloc(x);
+        } else {
+            return alloc_slow();
         }
+    }
 
-        if (next_index < N) {
-            auto b = blocks[blocks.length-1];
-            auto* x = &b->entries[next_index++].t;
-            return b->alloc(x);
-        }
-
+    T* __attribute__((cold)) alloc_slow() {
         auto b = reinterpret_cast<block*>(alloc_block());
-        memset(b->states, inactive, N);
         blocks.push(b);
-        next_index = 1;
-        return b->alloc(&b->entries[0].t);
+        free_list = b->init();
+        SXI_ASSERT(free_list);
+        return alloc();
     }
 
     void mark(T* x) {
@@ -155,7 +163,6 @@ struct allocator {
 
     vector<block*> blocks = {};
     entry* free_list = {};
-    size_t next_index = N;
 
     static allocator instance;
 };
