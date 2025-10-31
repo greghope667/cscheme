@@ -87,9 +87,9 @@ static void test_lambda() {
 static void test_calls() {
     auto env = sxi::make_environment();
     auto add = +[](int n, sxi::SXI* p) {
-        sxi::sxi_int total = 0;
+        sxi::integer total = 0;
         for (int i=0; i<n; i++)
-            total += as<sxi::sxi_int>(p[i]);
+            total += as<sxi::integer>(p[i]);
         return sxi::wrap(total);
     };
     sxi::env_define(env, sxi::make_symbol("+"), wrap(add));

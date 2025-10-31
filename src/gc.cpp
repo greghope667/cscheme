@@ -1,13 +1,8 @@
-#include "gc.hpp"
 #include "code.hpp"
-#include "error.hpp"
 #include "match.hpp"
 #include "sxi.hpp"
 #include "env.hpp"
-#include "vector.hpp"
-#include "string.hpp"
-#include "struct.hpp"
-#include <assert.h>
+#include "common.hpp"
 
 using namespace sxi;
 
@@ -78,8 +73,8 @@ struct allocator {
 
         T* alloc(T* x) {
             auto offset = reinterpret_cast<entry*>(x) - entries;
-            assert(0 <= offset && (size_t)offset < N);
-            assert(states[offset] == inactive);
+            SXI_ASSERT(0 <= offset && (size_t)offset < N);
+            SXI_ASSERT(states[offset] == inactive);
             states[offset] = active;
             gc_allocations++;
             return x;
@@ -87,9 +82,9 @@ struct allocator {
 
         void mark(T* x) {
             auto offset = reinterpret_cast<entry*>(x) - entries;
-            assert(0 <= offset && (size_t)offset < N);
+            SXI_ASSERT(0 <= offset && (size_t)offset < N);
             switch (states[offset]) {
-                case inactive:
+                default:
                     SXI_UNREACHABLE;
                 case marked:
                     break;
@@ -114,6 +109,8 @@ struct allocator {
                         entry->next_free = *frees;
                         *frees = entry;
                         break;
+                    default:
+                        SXI_UNREACHABLE;
                 }
             }
         }
@@ -167,12 +164,7 @@ struct allocator {
 
 template <typename T> allocator<T> allocator<T>::instance = {};
 
-template <tt::Boxed T>
-T* sxi::gc_alloc() {
-    return allocator<T>::instance.alloc();
-}
-
-#define X(T) template T* sxi::gc_alloc<T>();
+#define X(T) void* T::operator new(size_t) { return allocator<T>::instance.alloc(); }
 GC_TYPES
 #undef X
 
@@ -289,6 +281,8 @@ void deallocate(StructInstance* si) {
 
 /// GC module API
 
+int sxi::gc_allocations;
+
 static vector<SXI> gc_protected = {};
 
 void sxi::gc_protect(SXI value) {
@@ -305,17 +299,17 @@ void sxi::gc_unprotect(SXI value) {
     error(value, "gc_unprotect() object was not protected");
 }
 
-void sxi::gc_run(Fiber& es) {
+void sxi::Fiber::gc_run() {
     for (auto p : gc_protected)
         mark(p);
-    for (auto& frame : es.frames) {
+    for (auto& frame : frames) {
         mark(frame.code);
         mark(frame.env);
     }
-    for (auto v : es.stack)
+    for (auto v : stack)
         mark(v);
-    mark(es.tos);
-    mark(es.globals);
+    mark(tos);
+    mark(globals);
 
     #define X(T) allocator<T>::instance.sweep();
     GC_TYPES
@@ -326,29 +320,14 @@ void sxi::gc_run(Fiber& es) {
 
 /// Constructors exported in sxi.hpp
 
-Pair* sxi::alloc_pair() {
-    auto pair = gc_alloc<Pair>();
-    *pair = { c_null, c_null };
-    return pair;
-}
-
 sxi::Environment* sxi::make_environment(Environment* parent) {
-    auto env = gc_alloc<Environment>();
-    *env = { .parent = parent, .table = {} };
-    return env;
-}
-
-String* sxi::make_string() {
-    auto str = gc_alloc<String>();
-    *str = {};
-    return str;
+    return new Environment{ .parent = parent, .table = {} };
 }
 
 String* sxi::make_string(const char* data, int len) {
     if (len < 0)
         error_f("negative string length not allowed: %i", len);
-    auto str = gc_alloc<String>();
-    *str = {};
+    auto str = new String{};
     str->append(data, len);
     return str;
 }
@@ -358,8 +337,7 @@ String* sxi::make_string(const char* data) {
 }
 
 Vector* sxi::make_vector(int len) {
-    auto vec = gc_alloc<Vector>();
-    *vec = {};
+    auto vec = new Vector{};
     if (len > 0) {
         vec->reserve(len);
         vec->length = len;

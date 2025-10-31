@@ -1,7 +1,5 @@
-#include "string.hpp"
-#include "struct.hpp"
+#include "common.hpp"
 #include "match.hpp"
-#include "vector.hpp"
 
 using namespace sxi;
 

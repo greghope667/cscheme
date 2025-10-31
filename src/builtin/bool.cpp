@@ -1,6 +1,5 @@
 #include "builtin.hpp"
 #include "sxi.hpp"
-#include "../error.hpp"
 
 using namespace sxi;
 

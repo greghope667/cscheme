@@ -1,4 +1,3 @@
-#include "gc.hpp"
 #include "sxi.hpp"
 #include "code.hpp"
 #include "match.hpp"
@@ -69,7 +68,7 @@ struct Builder {
             return ptr;
         };
 
-        Code* c = gc_alloc<Code>();
+        Code* c = new Code{};
         c->insns_len = instructions.length;
         c->insns = take(instructions);
 
@@ -164,8 +163,7 @@ static int flatten_list(int sp, Pair* list) {
 }
 
 static Formals* parse_formals(SXI arg_list) {
-    auto formals = gc_alloc<Formals>();
-    *formals = { .names = {}, .is_variadic = false };
+    auto formals = new Formals{ .names = {}, .is_variadic = false };
 
     for (;;) {
         match(arg_list) {
@@ -356,9 +354,6 @@ Lambda* sxi::compile(SXI expr, Environment* env) {
         code->append(op_unlambda);
         compile_expr(code, true, 0, expr);
     });
-    auto args = gc_alloc<Formals>();
-    *args = {};
-    auto thunk = gc_alloc<Lambda>();
-    *thunk = { .code = code, .arguments = args, .capture = env };
-    return thunk;
+    auto args = new Formals{};
+    return new Lambda{ .code = code, .arguments = args, .capture = env };
 }

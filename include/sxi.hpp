@@ -78,6 +78,8 @@ template <typename T> concept Boxed = traits<T>::is_boxed;
 template <typename T> concept Fptr = traits<T>::is_fptr;
 
 template <typename T> constexpr sxi_tag tag = traits<T>::tag;
+
+#define SXI_POOL_ALLOC void* operator new(size_t) __attribute__((malloc));
 }
 
 template <tt::Unboxed T>
@@ -142,7 +144,6 @@ enum sxi_constant {
 };
 template <> struct tt::traits<sxi_constant> : tt::tagged<SXI_TAG_const>, tt::unboxed {};
 
-// constexpr SXI c_null  = { ._tag = SXI_TAG_const, ._integer = SXI_CONST_null  };
 constexpr SXI c_null  = wrap(SXI_CONST_null);
 constexpr SXI c_true  = wrap(SXI_CONST_true);
 constexpr SXI c_false = wrap(SXI_CONST_false);
@@ -165,8 +166,8 @@ static constexpr inline bool is_truthy(SXI sxi) {
 /// Fixnums ///
 // The default numeric type is a full pointer sized integer.
 
-typedef intptr_t sxi_int;
-template <> struct tt::traits<sxi_int> : tt::tagged<SXI_TAG_int>, tt::unboxed {};
+typedef intptr_t integer;
+template <> struct tt::traits<integer> : tt::tagged<SXI_TAG_int>, tt::unboxed {};
 
 /// Characters (Unicode? Who uses that?) ///
 
@@ -181,15 +182,12 @@ template <> struct tt::traits<character> : tt::tagged<SXI_TAG_char>, tt::unboxed
 struct Pair {
     SXI first;
     SXI second;
+    SXI_POOL_ALLOC
 };
 template <> struct tt::traits<Pair> : tt::tagged<SXI_TAG_pair>, tt::boxed {};
 
-Pair* alloc_pair();
-
 static inline Pair* make_pair(SXI first, SXI second) {
-    auto p = alloc_pair();
-    *p = { .first = first, .second = second };
-    return p;
+    return new Pair{ first, second };
 }
 
 static inline SXI cons(SXI first, SXI second) {
@@ -200,7 +198,7 @@ template <size_t N>
 static inline SXI list(const SXI (&ls)[N]) {
     SXI head = c_null;
     for (auto i = N; i --> 0;)
-        head = cons(ls[i], head);
+        head = wrap(new Pair{ ls[i], head });
     return head;
 }
 
@@ -229,7 +227,6 @@ namespace symbols {
 struct String;
 template <> struct tt::traits<String> : tt::tagged<SXI_TAG_string>, tt::boxed {};
 
-String* make_string();
 String* make_string(const char* str);
 String* make_string(const char* str, int len);
 char* string_data(String*, int* len = nullptr);
@@ -304,13 +301,21 @@ void gc_unprotect(SXI value);
 
 } // sxi
 
+#ifdef NDEBUG
+#define SXI_UNREACHABLE __builtin_unreachable()
+#define SXI_ASSERT(x) (static_cast<bool>(x) ? (void)0 : SXI_UNREACHABLE)
+#else
+#include <assert.h>
+#define SXI_UNREACHABLE assert(false)
+#define SXI_ASSERT(x) assert(x)
+#endif
+
 #ifndef SXI_USE_SETJMP
 #define SXI_TRY try
 #define SXI_CATCH(e) catch (sxi::Error e)
 #define SXI_THROW throw sxi::Error{}
 #else
 #include <setjmp.h>
-#include <assert.h>
 namespace sxi {
     struct jmp_buf_chain {
         static jmp_buf_chain* top;
@@ -324,8 +329,9 @@ namespace sxi {
         void pop() { top = next; }
 
         static void dothrow() __attribute__((noreturn)) {
-            assert(top);
-            _longjmp(top->buf, 1);
+            SXI_ASSERT(top);
+            auto t = top; top->pop();
+            _longjmp(t->buf, 1);
         }
     };
 }
@@ -334,7 +340,7 @@ namespace sxi {
 
 #define SXI_CATCH(e) \
         _try_.pop(); \
-    } else if (auto e = (_try_.pop(), sxi::Error{}); true) \
+    } else if (sxi::Error e{}; true) \
 
 #define SXI_THROW sxi::jmp_buf_chain::dothrow()
 #endif

@@ -53,6 +53,8 @@ struct Environment {
         }
         return false;
     }
+
+    SXI_POOL_ALLOC
 };
 
 const char* get_function_name(uintptr_t address);

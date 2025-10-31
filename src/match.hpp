@@ -10,7 +10,7 @@
     case tt::tag<T>: if (T* v=as<T>(_match); true)
 
 #define case_const(constant) case_val(sxi_constant,constant)
-#define case_int(i) case_val(sxi_int,i)
+#define case_int(i) case_val(integer,i)
 
 #define case_pair(pair) case_ptr(Pair,pair)
 #define case_pair2(car, cdr) \

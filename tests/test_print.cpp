@@ -20,9 +20,9 @@ static void print_and_compare(SXI value, const char* expected) {
 }
 
 void test_print_int() {
-    print_and_compare(wrap<sxi_int>(0), "0");
-    print_and_compare(wrap<sxi_int>(123), "123");
-    print_and_compare(wrap<sxi_int>(-123456), "-123456");
+    print_and_compare(wrap<integer>(0), "0");
+    print_and_compare(wrap<integer>(123), "123");
+    print_and_compare(wrap<integer>(-123456), "-123456");
 }
 
 void test_print_constants() {
@@ -34,9 +34,9 @@ void test_print_constants() {
 }
 
 void test_print_list() {
-    Pair a{wrap<sxi_int>(3), c_null};
-    Pair b{wrap<sxi_int>(2), wrap(&a)};
-    Pair c{wrap<sxi_int>(1), wrap(&b)};
+    Pair a{wrap<integer>(3), c_null};
+    Pair b{wrap<integer>(2), wrap(&a)};
+    Pair c{wrap<integer>(1), wrap(&b)};
     print_and_compare(wrap(&c), "(1 2 3)");
 }
 

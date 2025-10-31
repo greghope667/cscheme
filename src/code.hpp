@@ -46,12 +46,14 @@ struct Code {
     int16_t literals_len;
     int16_t lambdas_len;
     Symbol* name;
+    SXI_POOL_ALLOC
 };
 template <> struct tt::traits<Code> : tt::boxed {};
 
 struct Formals {
     vector<Symbol*> names;
     bool is_variadic;
+    SXI_POOL_ALLOC
 };
 template <> struct tt::traits<Formals> : tt::boxed {};
 
@@ -59,11 +61,13 @@ struct Lambda {
     Code* code;
     Formals* arguments;
     Environment* capture;
+    SXI_POOL_ALLOC
 };
 
 struct ProtoLambda {
     Code* code;
     Formals* arguments;
+    SXI_POOL_ALLOC
 };
 
 enum Function_s { SXI_FUNC_apply, SXI_FUNC_current_env, SXI_FUNC_values };
@@ -71,6 +75,7 @@ template <> struct tt::traits<Function_s> : tt::tagged<SXI_TAG_function_s>, tt::
 
 struct Continuation {
     Continuation* next;
+    SXI_POOL_ALLOC
 };
 template <> struct tt::traits<Continuation> : tt::boxed {};
 
@@ -88,6 +93,10 @@ struct Fiber {
     Environment* globals;
     SXI tos;
     ReturnFrame* cont;
+
+    void gc_run();
 };
+
+extern int gc_allocations;
 
 } // sxi

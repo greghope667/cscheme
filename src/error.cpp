@@ -1,4 +1,4 @@
-#include "error.hpp"
+#include "common.hpp"
 
 #include <stdio.h>
 #include <stdarg.h>

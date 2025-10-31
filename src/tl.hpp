@@ -64,8 +64,6 @@ struct vector {
 
     T& operator[](ptrdiff_t i) { bounds_check(i, length); return data[i]; }
     sxi::span<T> span() { return { data, length }; }
-
-    // static constexpr vector empty() { return vector{}; }
 };
 
 struct string {
@@ -118,11 +116,11 @@ struct string {
         if (length < 0)
             error_f("string length must be positive");
         auto new_length = length_ + length;
-        if (new_length < 11) {
+        if (new_length < 12) {
             memcpy(buffer_ + length_, data, length);
             buffer_[new_length] = 0;
             length_ = new_length;
-        } else if (length_ < 11) {
+        } else if (length_ < 12) {
             auto ptr = alloc<char>(new_length + 1);
             memcpy(ptr, buffer_, length_);
             memcpy(ptr + length_, data, length);
@@ -158,8 +156,6 @@ struct insert_only_map {
     vector<Entry> items;
     int* index;
     unsigned index_length;
-
-    // static constexpr insert_only_map empty() { return insert_only_map{}; }
 
     LookupResult lookup(K key) const { return lookup(key, hash_fn(key)); }
 
@@ -238,9 +234,3 @@ namespace std {
     template <typename T> constexpr const T* begin(initializer_list<T> i) { return i.data; }
     template <typename T> constexpr const T* end(initializer_list<T> i) { return i.data + i.length; }
 }
-
-#ifndef NDEBUG
-#define SXI_UNREACHABLE assert(false)
-#else
-#define SXI_UNREACHABLE __builtin_unreachable()
-#endif

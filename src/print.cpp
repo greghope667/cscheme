@@ -2,9 +2,7 @@
 #include "env.hpp"
 #include "sxi.hpp"
 #include "match.hpp"
-#include "string.hpp"
-#include "struct.hpp"
-#include "vector.hpp"
+#include "common.hpp"
 
 #include <stdio.h>
 
@@ -174,7 +172,7 @@ void sxi::print(FILE* f, SXI value) {
             if (lambda->code->name)
                 fprintf(f, "#<lambda %s ", symbol_name(lambda->code->name));
             else
-                fprintf(f, "#<lambda %p ", lambda);
+                fprintf(f, "#<lambda ");
             print_formals(f, lambda->arguments);
             fputc('>', f);
             break;
@@ -202,10 +200,7 @@ void sxi::print(FILE* f, SXI value) {
         case SXI_TAG_function_1:
         case SXI_TAG_function_n:
         case SXI_TAG_function_s:
-            if (auto name = get_function_name(value._integer))
-                fprintf(f, "#<function %s>", name);
-            else
-                fprintf(f, "#<function 0x%zx>", value._integer);
+            fprintf(f, "#<function %s>", get_function_name(value._integer));
             break;
         default:
             fprintf(f, "#<%s 0x%zx>", get_tag_name(value._tag), value._integer);

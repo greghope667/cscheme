@@ -1,6 +1,5 @@
 #include "builtin.hpp"
 #include "sxi.hpp"
-#include "../error.hpp"
 
 #include <limits.h>
 
@@ -8,12 +7,12 @@ using namespace sxi;
 
 static SXI cons(int argc, SXI* argv) {
     SXI_CHECK_ARITY(2, 2);
-    return cons(argv[0], argv[1]);
+    return wrap(new Pair{ argv[0], argv[1] });
 }
 
 static SXI xcons(int argc, SXI* argv) {
     SXI_CHECK_ARITY(2, 2);
-    return cons(argv[1], argv[0]);
+    return wrap(new Pair{ argv[1], argv[0] });
 }
 
 static SXI set_car(int argc, SXI* argv) {
@@ -51,7 +50,7 @@ struct list_builder_fwd {
     SXI* tail;
     list_builder_fwd() : head(), tail(&head) {}
     void push(SXI x) {
-        auto p = alloc_pair();
+        auto p = new Pair;
         p->first = x;
         *tail = wrap(p);
         tail = &p->second;
@@ -86,7 +85,7 @@ static SXI list(int argc, SXI* argv) {
 
 static SXI make_list(int argc, SXI* argv) {
     SXI_CHECK_ARITY(1, 2);
-    auto length = as<sxi_int>(argv[0]);
+    auto length = as<integer>(argv[0]);
     auto fill = argc == 2 ? argv[1] : c_void;
     if (length < 0)
         error("negative make-list length");
@@ -105,7 +104,7 @@ static SXI list_reverse(SXI x) {
 
 static SXI list_tail(int argc, SXI* argv) {
     SXI_CHECK_ARITY(2, 2);
-    auto length = as<sxi_int>(argv[1]);
+    auto length = as<integer>(argv[1]);
     if (length <= 0)
         return argv[0];
     auto it = listerate(argv[0]).begin();
@@ -123,7 +122,7 @@ static SXI list_ref(int argc, SXI* argv) {
 static SXI general_car_cdr(int argc, SXI* argv) {
     SXI_CHECK_ARITY(2, 2);
     auto object = argv[0];
-    auto path = as<sxi_int>(argv[1]);
+    auto path = as<integer>(argv[1]);
     while (path > 1) {
         object = (path & 1) ? car(object) : cdr(object);
         path >>= 1;

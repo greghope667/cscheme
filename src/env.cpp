@@ -25,19 +25,12 @@ bool sxi::env_try_lookup(const Environment* env, const Symbol* name, SXI* out) {
 Environment* sxi::make_environment_rootlet() {
     auto env = make_environment();
 
-    auto add = [&env](const builtin_lib& lib) {
+    for (auto& lib : builtin_libraries) {
         for (auto [name, func] : lib.function_1)
             env->define(make_symbol(name), wrap(func));
         for (auto [name, func] : lib.function_n)
             env->define(make_symbol(name), wrap(func));
     };
-
-    add(builtin_lib_list);
-    add(builtin_lib_bool);
-    add(builtin_lib_struct);
-    add(builtin_lib_number);
-    add(builtin_lib_misc);
-    add(builtin_lib_vector);
 
     env->define(make_symbol("apply"), wrap(SXI_FUNC_apply));
     env->define(make_symbol("current-env"), wrap(SXI_FUNC_current_env));
@@ -71,19 +64,12 @@ static auto function_names = []{
         if (not found) table.append(value, name, loc);
     };
 
-    auto add = [&](const builtin_lib& lib) {
+    for (auto& lib : builtin_libraries) {
         for (auto [name, func] : lib.function_1)
             insert(name, uintptr_t(func));
         for (auto [name, func] : lib.function_n)
             insert(name, uintptr_t(func));
-    };
-
-    add(builtin_lib_list);
-    add(builtin_lib_bool);
-    add(builtin_lib_struct);
-    add(builtin_lib_number);
-    add(builtin_lib_misc);
-    add(builtin_lib_vector);
+    }
 
     insert("apply", SXI_FUNC_apply);
     insert("current-env", SXI_FUNC_current_env);
@@ -94,5 +80,11 @@ static auto function_names = []{
 
 const char* sxi::get_function_name(uintptr_t address) {
     auto [found, loc] = function_names.lookup(address);
-    return found ? function_names.items[loc].value : nullptr;
+    if (found) {
+        return function_names.items[loc].value;
+    } else {
+        static char buf[20];
+        sprintf(buf, "0x%zx", address);
+        return buf;
+    }
 }

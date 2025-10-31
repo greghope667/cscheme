@@ -1,6 +1,5 @@
 #include "builtin.hpp"
 #include "../env.hpp"
-#include "../string.hpp"
 
 #include <limits.h>
 
@@ -57,7 +56,7 @@ static const function_1_def def1s[] = {
     { "display", display },
     { "write", display },
     { "disassemble", disassemble },
-    { "exit", [](SXI s) { exit(instance<sxi_int>(s) ? as<sxi_int>(s) : 1); return c_void; } },
+    { "exit", [](SXI s) { exit(instance<integer>(s) ? as<integer>(s) : 1); return c_void; } },
 };
 
 static const function_n_def defns[] = {

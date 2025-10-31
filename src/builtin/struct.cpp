@@ -1,8 +1,5 @@
 #include "builtin.hpp"
 #include "sxi.hpp"
-#include "../error.hpp"
-#include "../struct.hpp"
-#include "../gc.hpp"
 #include "../match.hpp"
 
 using namespace sxi;
@@ -13,8 +10,7 @@ static SXI make_struct_type(int argc, SXI* argv) {
 
     auto name = as<Symbol>(argv[0]);
 
-    auto st = gc_alloc<StructType>();
-    *st = { .name = name, .field_names = {} };
+    auto st = new StructType{ .name = name, .field_names = {} };
 
     st->field_names.reserve(argc-1);
     for (int i=1; i<argc; i++)
@@ -32,8 +28,7 @@ static SXI make_struct(int argc, SXI* argv) {
     if (argc != 1 + field_count)
         invalid_arguments("make-struct", span(argv, argc));
 
-    auto s = gc_alloc<StructInstance>();
-    *s = { .type = type, .fields = {} };
+    auto s = new StructInstance{ .type = type, .fields = {} };
 
     s->fields.reserve(field_count);
     s->fields.length = field_count;

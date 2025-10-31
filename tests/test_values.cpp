@@ -16,14 +16,14 @@ void test_truthy() {
 }
 
 void test_wrap() {
-    (void)wrap<sxi_int>(3);
+    (void)wrap<integer>(3);
     Pair pair{};
     (void)wrap<Pair>(&pair);
 }
 
 void test_throws() {
     TEST_EXCEPTION(
-        as<Pair>(wrap<sxi_int>(0));
+        as<Pair>(wrap<integer>(0));
     , Error);
 }
 

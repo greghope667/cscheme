@@ -2,14 +2,14 @@
 
 #include <stddef.h>
 
-void* sxi_malloc(size_t size);
+void* sxi_malloc(size_t size) __attribute__((malloc));
 void* sxi_realloc(void* p, size_t old_size, size_t new_size);
 void sxi_free(void* p, size_t size);
 
 namespace sxi {
 
 template <typename T>
-inline T*
+inline T* __attribute__((malloc))
 alloc(int count) {
     return (T*)sxi_malloc(count * sizeof(T));
 }
@@ -23,9 +23,9 @@ realloc(T* ptr, int old_count, int new_count) {
 template <typename T, typename I>
 inline T*
 realloc_x2(T* ptr, I& count) {
-    I old_count = count;
+    auto p = realloc(ptr, count, count*2);
     count *= 2;
-    return realloc(ptr, old_count, count);
+    return p;
 }
 
 template <typename T>

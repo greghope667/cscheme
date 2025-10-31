@@ -1,7 +1,5 @@
 #include "builtin.hpp"
 #include "sxi.hpp"
-#include "../vector.hpp"
-#include "../gc.hpp"
 
 #include <limits.h>
 
@@ -10,7 +8,7 @@ using namespace sxi;
 static SXI make_vector(int argc, SXI* argv) {
     SXI_CHECK_ARITY(1, 2);
 
-    auto len = as<sxi_int>(argv[0]);
+    auto len = as<integer>(argv[0]);
     if (len > INT_MAX || len < 0)
         error_f("invalid length for make-vector: %zi", len);
 
@@ -23,8 +21,7 @@ static SXI make_vector(int argc, SXI* argv) {
 }
 
 static SXI vector(int argc, SXI* argv) {
-    auto v = gc_alloc<Vector>();
-    *v = {};
+    auto v = new Vector{};
     v->reserve(argc);
     memcpy(v->data, argv, argc * sizeof(SXI));
     v->length = argc;
@@ -32,26 +29,26 @@ static SXI vector(int argc, SXI* argv) {
 }
 
 static SXI vector_length(SXI vec) {
-    return wrap<sxi_int>(as<Vector>(vec)->length);
+    return wrap<integer>(as<Vector>(vec)->length);
 }
 
 static SXI vector_ref(int argc, SXI* argv) {
     SXI_CHECK_ARITY(2, 2);
-    return (*as<Vector>(argv[0]))[as<sxi_int>(argv[1])];
+    return (*as<Vector>(argv[0]))[as<integer>(argv[1])];
 }
 
 static SXI vector_set(int argc, SXI* argv) {
     SXI_CHECK_ARITY(3, 3);
     auto v = as<Vector>(argv[0]);
-    (*v)[as<sxi_int>(argv[1])] = argv[2];
+    (*v)[as<integer>(argv[1])] = argv[2];
     return wrap(v);
 }
 
 static SXI vector_to_list(int argc, SXI* argv) {
     SXI_CHECK_ARITY(1, 3);
     auto vec = as<Vector>(argv[0]);
-    auto begin = argc >= 2 ? as<sxi_int>(argv[1]) : 0;
-    auto end = argc == 3 ? as<sxi_int>(argv[2]) : vec->length;
+    auto begin = argc >= 2 ? as<integer>(argv[1]) : 0;
+    auto end = argc == 3 ? as<integer>(argv[2]) : vec->length;
     if (begin < 0 || end < begin || vec->length < end)
         invalid_arguments(__FUNCTION__, span(argv, argc));
 
@@ -81,8 +78,7 @@ struct listerate {
 };
 
 static SXI list_to_vector(SXI list) {
-    auto v = gc_alloc<Vector>();
-    *v = {};
+    auto v = new Vector{};
     for (auto x : listerate(list))
         v->push(x);
     v->shrink_to_fit();
@@ -92,8 +88,8 @@ static SXI list_to_vector(SXI list) {
 static SXI vector_copy(int argc, SXI* argv) {
     SXI_CHECK_ARITY(1, 3);
     auto vec = as<Vector>(argv[0]);
-    auto begin = argc >= 2 ? as<sxi_int>(argv[1]) : 0;
-    auto end = argc == 3 ? as<sxi_int>(argv[2]) : vec->length;
+    auto begin = argc >= 2 ? as<integer>(argv[1]) : 0;
+    auto end = argc == 3 ? as<integer>(argv[2]) : vec->length;
     if (begin < 0 || end < begin || vec->length < end)
         invalid_arguments(__FUNCTION__, span(argv, argc));
 
@@ -103,10 +99,10 @@ static SXI vector_copy(int argc, SXI* argv) {
 static SXI vector_copy_mut(int argc, SXI* argv) {
     SXI_CHECK_ARITY(3, 5);
     auto to = as<Vector>(argv[0]);
-    auto at = as<sxi_int>(argv[1]);
+    auto at = as<integer>(argv[1]);
     auto from = as<Vector>(argv[2]);
-    auto start = argc >= 4 ? as<sxi_int>(argv[3]) : 0;
-    auto end = argc == 5 ? as<sxi_int>(argv[4]) : from->length;
+    auto start = argc >= 4 ? as<integer>(argv[3]) : 0;
+    auto end = argc == 5 ? as<integer>(argv[4]) : from->length;
 
     if (at < 0 || to->length - at < end - start ||
         start < 0 || end < start || from->length < end
@@ -118,12 +114,11 @@ static SXI vector_copy_mut(int argc, SXI* argv) {
 }
 
 static SXI vector_append(int argc, SXI* argv) {
-    sxi_int length = 0;
+    integer length = 0;
     for (auto v : span(argv, argc))
         length += as<Vector>(v)->length;
 
-    auto vec = gc_alloc<Vector>();
-    *vec = {};
+    auto vec = new Vector{};
     vec->reserve(length);
 
     for (auto v : span(argv, argc)) {
@@ -139,8 +134,8 @@ static SXI vector_fill(int argc, SXI* argv) {
     SXI_CHECK_ARITY(2, 4);
     auto vec = as<Vector>(argv[0]);
     auto fill = argv[1];
-    auto begin = argc >= 3 ? as<sxi_int>(argv[2]) : 0;
-    auto end = argc == 4 ? as<sxi_int>(argv[3]) : vec->length;
+    auto begin = argc >= 3 ? as<integer>(argv[2]) : 0;
+    auto end = argc == 4 ? as<integer>(argv[3]) : vec->length;
     if (begin < 0 || end < begin || vec->length < end)
         invalid_arguments(__FUNCTION__, span(argv, argc));
 

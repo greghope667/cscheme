@@ -1,23 +1,22 @@
 #include "sxi.hpp"
 #include "tl.hpp"
-#include "string.hpp"
+#include "common.hpp"
 
-#include <assert.h>
 #include <stdlib.h>
 
 enum token_tag {
-    eof,
-    lparen,
-    rparen,
+    t_eof,
+    t_lparen,
+    t_rparen,
     t_quote,
-    boolean,
-    dot,
-    integer,
-    ident,
+    t_boolean,
+    t_dot,
+    t_integer,
+    t_ident,
     t_quasiquote,
     t_unquote,
     t_unquote_s,
-    lambda,
+    t_lambda,
     t_character,
     t_string,
     t_vector,
@@ -97,7 +96,7 @@ static sxi::character read_character(reader r) {
     sxi::error_f("read error: unknown character escape sequence: \\%s", buffer);
 }
 
-static sxi::sxi_int read_number(reader r, int base) {
+static sxi::integer read_number(reader r, int base) {
     char buffer[sxi::MAX_SYMBOL_LENGTH];
     auto len = read_identifier(r, r.getc(), buffer);
     buffer[len] = 0;
@@ -111,13 +110,13 @@ static sxi::sxi_int read_number(reader r, int base) {
 static token read_hash(reader r) {
     switch (int ch = r.getc(); ch) {
         case EOF:   sxi::error_f("read error: unexpected eof");
-        case 't':   return { .tag = boolean, .data = true };
-        case 'f':   return { .tag = boolean, .data = false };
+        case 't':   return { .tag = t_boolean, .data = true };
+        case 'f':   return { .tag = t_boolean, .data = false };
         case '\\':  return { .tag = t_character, .data = read_character(r) };
-        case 'b':   return { .tag = integer, .data = read_number(r, 2) };
-        case 'o':   return { .tag = integer, .data = read_number(r, 8) };
-        case 'd':   return { .tag = integer, .data = read_number(r, 10) };
-        case 'x':   return { .tag = integer, .data = read_number(r, 16) };
+        case 'b':   return { .tag = t_integer, .data = read_number(r, 2) };
+        case 'o':   return { .tag = t_integer, .data = read_number(r, 8) };
+        case 'd':   return { .tag = t_integer, .data = read_number(r, 10) };
+        case 'x':   return { .tag = t_integer, .data = read_number(r, 16) };
         case '(':   return { .tag = t_vector, .data = {} };
         default:    sxi::error_f("read error: illegal escape: '#%c'", ch);
     }
@@ -139,7 +138,7 @@ static void read_string_escape(reader r, sxi::String* str) {
 }
 
 static token read_string(reader r) {
-    auto str = sxi::make_string();
+    auto str = new sxi::String{};
     for (;;) {
         switch (int ch = r.getc(); ch) {
             case EOF:
@@ -160,11 +159,11 @@ static token read_token(reader r) {
     skip_space: int ch = r.getc();
     switch (ch) {
         case EOF:
-            return { .tag = eof, .data=0 };
+            return { .tag = t_eof, .data=0 };
         case '(': case '[':
-            return { .tag = lparen, .data=0 };
+            return { .tag = t_lparen, .data=0 };
         case ')': case ']':
-            return { .tag = rparen, .data=0 };
+            return { .tag = t_rparen, .data=0 };
         case '#':
             return read_hash(r);
         case '\'':
@@ -184,7 +183,7 @@ static token read_token(reader r) {
             do { ch = r.getc(); } while (ch != EOF && ch != '\n');
             goto skip_space;
         case '\\': // extension: (\(args) body) -> (lambda (args) body)
-            return { .tag = lambda, .data=0 };
+            return { .tag = t_lambda, .data=0 };
         case '"':
             return read_string(r);
     }
@@ -194,16 +193,16 @@ static token read_token(reader r) {
     int len = read_identifier(r, ch, buffer);
 
     if (len == 1 && buffer[0] == '.')
-        return { .tag = dot, .data=0 };
+        return { .tag = t_dot, .data=0 };
 
     buffer[len] = 0;
     char* end;
     auto i = strtoll(buffer, &end, 10);
     if (end == &buffer[len])
-        return { .tag = integer, .data = i };
+        return { .tag = t_integer, .data = i };
 
     auto sym = sxi::make_symbol(buffer, len);
-    return { .tag = ident, .data = (intptr_t)sym };
+    return { .tag = t_ident, .data = (intptr_t)sym };
 }
 
 using namespace sxi;
@@ -224,21 +223,21 @@ static SXI read_quote_form(reader r, Symbol* quote) {
 
 static SXI read_value(reader r, token first) {
     switch (first.tag) {
-        case boolean:       return wrap_bool(first.data);
-        case eof:           return c_eof;
-        case lparen:        return read_list(r);
-        case integer:       return wrap<sxi_int>(first.data);
-        case ident:         return wrap((Symbol*)first.data);
+        case t_boolean:     return wrap_bool(first.data);
+        case t_eof:         return c_eof;
+        case t_lparen:      return read_list(r);
+        case t_integer:     return wrap<integer>(first.data);
+        case t_ident:       return wrap((Symbol*)first.data);
         case t_quote:       return read_quote_form(r, symbol_quote);
         case t_quasiquote:  return read_quote_form(r, symbol_quasiquote);
         case t_unquote:     return read_quote_form(r, symbol_unquote);
         case t_unquote_s:   return read_quote_form(r, symbol_unquote_s);
-        case lambda:        return wrap(symbol_lambda);
+        case t_lambda:      return wrap(symbol_lambda);
         case t_character:   return wrap(sxi::character(first.data));
         case t_string:      return wrap((sxi::String*)first.data);
         case t_vector:      return read_vector(r);
 
-        case rparen: case dot:
+        case t_rparen: case t_dot:
             error("read error: unexpected token");
     }
     SXI_UNREACHABLE;
@@ -254,15 +253,15 @@ static SXI read_list(reader r) {
 
     for (;;) {
         switch (token t = read_token(r); t.tag) {
-            case eof:
+            case t_eof:
                 error("read error: unexpected eof");
-            case rparen:
+            case t_rparen:
                 return head;
-            case dot:
+            case t_dot:
                 if (tail == &head)
                     error("read error: headless dotted pair");
                 *tail = read_value(r);
-                if (read_token(r).tag != rparen)
+                if (read_token(r).tag != t_rparen)
                     error("read error: expected rparen");
                 return head;
             default:
@@ -277,9 +276,9 @@ static SXI read_vector(reader r) {
     auto vec = make_vector();
     for (;;) {
         switch (token t = read_token(r); t.tag) {
-            case eof:
+            case t_eof:
                 error("read error: unexpected eof");
-            case rparen:
+            case t_rparen:
                 return wrap(vec);
             default:
                 vector_push(vec, read_value(r, t));
@@ -287,12 +286,6 @@ static SXI read_vector(reader r) {
     }
 }
 
-// SXI sxi::read(FILE* f) {
-//     return read_value({f});
-// }
-//
-// extern "C" __attribute__((alias("sxi::read"))) SXI sxi_read(FILE* f);
-extern "C" SXI sxi_read(void* f) {
-    return read_value({(FILE*)f});
+SXI sxi::read(FILE* f) {
+    return read_value({f});
 }
-__attribute__((alias("sxi_read"))) SXI sxi::read(FILE* f);

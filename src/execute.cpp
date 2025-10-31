@@ -1,13 +1,9 @@
-#include "gc.hpp"
 #include "match.hpp"
 #include "sxi.hpp"
 #include "code.hpp"
 #include "alloc.hpp"
 #include "env.hpp"
-#include "error.hpp"
-
-#include "assert.h"
-#include "limits.h"
+#include "common.hpp"
 
 using namespace sxi;
 
@@ -15,8 +11,7 @@ static Environment*
 bind_lambda(Lambda* l, span<SXI> args) {
     int len = l->arguments->names.length;
 
-    auto env = gc_alloc<Environment>();
-    *env = { .parent = l->capture, .table = {} };
+    auto env = new Environment{ .parent = l->capture, .table = {} };
     env->table.items.reserve(len);
     env->table.items.length = len;
 
@@ -55,7 +50,7 @@ using Stack = vector<SXI>;
 #if __has_attribute(preserve_none)
 #define PRESERVE_NONE __attribute__((preserve_none))
 #else
-#warning preserve_none not supported
+// #warning preserve_none not supported
 #define PRESERVE_NONE
 #endif
 
@@ -80,8 +75,8 @@ static constexpr opcode_fn* dispatch_table[] = {
 #define EX(op) static PRESERVE_NONE SXI ex_ ## op ARGS
 
 EX(op_exit) {
-    assert(stack->length == 0);
-    assert(fiber->frames.length == 0);
+    SXI_ASSERT(stack->length == 0);
+    SXI_ASSERT(fiber->frames.length == 0);
     (void)ip;
     (void)code;
     (void)locals;
@@ -100,8 +95,7 @@ EX(op_literal) {
 
 EX(op_lambda) {
     auto pl = code->lambdas[ip[1]];
-    auto lambda = gc_alloc<Lambda>();
-    *lambda = { pl.code, pl.arguments, locals };
+    auto lambda = new Lambda{ pl.code, pl.arguments, locals };
     fiber->tos = wrap(lambda);
     NEXT(2);
 }
@@ -155,7 +149,7 @@ EX(op_alloc_stack) {
 
 EX(op_ret) {
     if (gc_allocations > 4096)
-        gc_run(*fiber);
+        fiber->gc_run();
     auto cont = fiber->cont;
     code = cont->code;
     ip = cont->ip;
@@ -173,7 +167,7 @@ EX(op_call) {
 
 EX(op_tailcall) {
     int fp = fiber->cont->args_end;
-    assert(stack->length > fp);
+    SXI_ASSERT(stack->length > fp);
     auto function = stack->data[fp];
     auto args = span<SXI>(stack->data + fp + 1, stack->length - fp - 1);
     match(function) {
@@ -242,8 +236,7 @@ static Fiber make_fiber(Environment* globals) {
     auto exit_insns = alloc<opcode>(1);
     exit_insns[0] = op_exit;
 
-    auto exit_fn = gc_alloc<Code>();
-    *exit_fn = {};
+    auto exit_fn = new Code{};
     exit_fn->insns = exit_insns;
     exit_fn->insns_len = 1;
 
