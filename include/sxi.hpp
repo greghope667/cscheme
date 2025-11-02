@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 namespace sxi {
 
@@ -79,7 +80,10 @@ template <typename T> concept Fptr = traits<T>::is_fptr;
 
 template <typename T> constexpr sxi_tag tag = traits<T>::tag;
 
-#define SXI_POOL_ALLOC void* operator new(size_t) __attribute__((malloc));
+#define SXI_POOL_ALLOC \
+    static void* gc_allocate() __attribute__((malloc)); \
+    void* operator new(size_t sz) { return memset(gc_allocate(), 0, sz); }; \
+    void operator delete(void*, size_t) {}
 }
 
 template <tt::Unboxed T>

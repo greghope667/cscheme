@@ -10,7 +10,7 @@ using namespace sxi;
 
 #define BLOCK_SIZE 4096zu
 
-static void* alloc_block() {
+static void* __attribute__((noinline)) alloc_block() {
     static constexpr size_t BLOCK_ALLOC_COUNT = 4;
     static char* blocks;
     static int block_count;
@@ -71,14 +71,13 @@ struct allocator {
         state states[N];
         entry entries[N];
 
-        entry* init() {
+        block() {
             memset(states, inactive, sizeof(states));
             entry* e = nullptr;
             for (auto i=N; i-->0;) {
                 entries[i].next_free = e;
                 e = &entries[i];
             }
-            return e;
         }
 
         T* alloc(T* x) {
@@ -124,6 +123,8 @@ struct allocator {
                 }
             }
         }
+
+        void* operator new(size_t) { return alloc_block(); }
     };
     static_assert(sizeof(block) <= BLOCK_SIZE);
 
@@ -144,11 +145,10 @@ struct allocator {
     }
 
     T* __attribute__((cold)) alloc_slow() {
-        auto b = reinterpret_cast<block*>(alloc_block());
+        auto b = new block();
         blocks.push(b);
-        free_list = b->init();
-        SXI_ASSERT(free_list);
-        return alloc();
+        free_list = &b->entries[1];
+        return b->alloc(&b->entries[0].t);
     }
 
     void mark(T* x) {
@@ -157,11 +157,11 @@ struct allocator {
 
     void sweep() {
         for (auto b : blocks) {
-            b->sweep(&free_list);
+            static_cast<block*>(b)->sweep(&free_list);
         }
     }
 
-    vector<block*> blocks = {};
+    vector<void*> blocks = {};
     entry* free_list = {};
 
     static allocator instance;
@@ -171,7 +171,7 @@ struct allocator {
 
 template <typename T> allocator<T> allocator<T>::instance = {};
 
-#define X(T) void* T::operator new(size_t) { return allocator<T>::instance.alloc(); }
+#define X(T) void* T::gc_allocate() { return allocator<T>::instance.alloc(); }
 GC_TYPES
 #undef X
 
